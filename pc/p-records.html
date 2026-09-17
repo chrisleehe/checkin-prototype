@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考勤记录 · 考勤签到系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* 页面级布局微调：颜色一律使用设计系统变量 */
+  .filter-card { margin-bottom: 16px; }
+  .emp-cell { display: flex; align-items: center; gap: 10px; }
+  .emp-cell b { font-weight: 600; }
+  .table-note { margin-top: 14px; }
+  .detail-head { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .detail-name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .detail-sec { font-size: 13px; font-weight: 600; color: var(--text-sub); margin: 16px 0 10px; display: flex; align-items: center; gap: 6px; }
+  .detail-sec [data-icon] { width: 15px; height: 15px; color: var(--primary); }
+  .detail-appr { display: flex; align-items: center; gap: 10px; background: var(--neutral-soft); border-radius: var(--radius-md); padding: 10px 12px; }
+  .detail-appr [data-icon] { width: 18px; height: 18px; color: var(--info); flex: none; }
+  .detail-appr__main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .detail-appr__main b { font-size: 13px; }
+</style>
+</head>
+<body data-page="records">
+<div class="pc-app">
+  <aside class="pc-nav">
+    <div class="pc-nav__logo"><span class="pc-nav__logo-mark" data-icon="timer"></span>
+      <div><b>考勤签到系统</b><i>Attendance Console</i></div></div>
+    <div class="pc-nav__group-label">考勤管理</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="dashboard" href="p-dashboard.html"><i data-icon="layout-dashboard"></i>仪表盘</a>
+      <a class="pc-nav__link" data-nav="records" href="p-records.html"><i data-icon="calendar"></i>考勤记录</a>
+      <a class="pc-nav__link" data-nav="approval" href="p-approval.html"><i data-icon="clipboard-check"></i>审批中心</a>
+    </nav>
+    <div class="pc-nav__group-label">系统配置</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="rules" href="p-rules.html"><i data-icon="settings"></i>考勤规则</a>
+    </nav>
+    <a class="pc-nav__footer" href="../index.html"><i data-icon="arrow-left"></i>返回总览入口</a>
+  </aside>
+  <div class="pc-main">
+    <header class="pc-topbar">
+      <div class="pc-crumb">考勤管理 <i data-icon="chevron-right"></i> <b data-crumb>考勤记录</b></div>
+      <div class="pc-topbar__right"><span class="pc-topbar__date" id="topDate"></span>
+        <div class="avatar avatar--sm">王</div><span>王莉 · 系统管理员</span></div>
+    </header>
+    <main class="pc-content">
+
+      <!-- 页首 -->
+      <div class="pc-page-title reveal">
+        <h2>考勤记录</h2>
+        <span>团队打卡明细查询</span>
+      </div>
+
+      <!-- 筛选卡 -->
+      <div class="card filter-card reveal d1">
+        <div class="card__body">
+          <div class="filter-row">
+            <div class="field">
+              <div class="field__label">日期 <span class="badge badge--req">必填</span></div>
+              <input type="date" class="input mono" id="fDate" value="2026-09-17">
+            </div>
+            <div class="field">
+              <div class="field__label">部门 <span class="badge badge--opt">选填</span></div>
+              <select class="select" id="fDept">
+                <option value="all">全部部门</option>
+                <option value="产品设计部">产品设计部</option>
+                <option value="研发中心">研发中心</option>
+                <option value="市场运营部">市场运营部</option>
+                <option value="客户成功部">客户成功部</option>
+                <option value="人力资源部">人力资源部</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="field__label">状态 <span class="badge badge--opt">选填</span></div>
+              <select class="select" id="fStatus">
+                <option value="all">全部状态</option>
+                <option value="normal">正常</option>
+                <option value="late">迟到</option>
+                <option value="severeLate">严重迟到</option>
+                <option value="field">外勤</option>
+                <option value="absent">旷工/请假</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="field__label">员工搜索 <span class="badge badge--opt">选填</span></div>
+              <div class="search-bar"><i data-icon="search"></i><input id="fKw" placeholder="姓名 / 工号"></div>
+            </div>
+            <button class="btn btn--primary" id="btnQuery"><i data-icon="filter" class="icon--sm"></i>查询</button>
+            <button class="btn btn--ghost" id="btnExport"><i data-icon="download" class="icon--sm"></i>导出</button>
+            <button class="btn" id="btnReset"><i data-icon="refresh-cw" class="icon--sm"></i>重置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 记录表格 -->
+      <div class="card reveal d2">
+        <div class="card__head">
+          <div class="card__title"><i data-icon="calendar-check"></i>打卡明细</div>
+          <span class="faint" id="tableMeta">数据加载中…</span>
+        </div>
+        <div class="card__body">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>员工</th><th>部门</th><th>上班打卡</th><th>下班打卡</th><th>状态</th><th>备注</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="tbody">
+                <tr><td colspan="7"><div class="empty"><i data-icon="refresh-cw"></i><p>正在加载打卡明细…</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-strip table-note"><i data-icon="smartphone"></i>数据实时来自移动端打卡，异常状态次日 <span class="mono">10:00</span> 自动锁定。</div>
+          <div class="pagination" id="pager"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-backdrop" id="modalDetail">
+  <div class="modal">
+    <div class="modal__head">
+      <h3>打卡详情</h3>
+      <div class="modal__close" data-close-modal><i data-icon="x"></i></div>
+    </div>
+    <div class="modal__body" id="detailBody"></div>
+    <div class="modal__foot">
+      <button class="btn btn--ghost" data-close-modal>关闭</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const PAGE_SIZE = 10;
+  let filtered = [];
+  let curPage = 1;
+  let lastFilter = null;
+
+  /* 地点文案：全部由 DB 派生，避免散落硬编码 */
+  const wifiSsid = (DB.rules[0].wifiSsids || [])[0] || "Office-WiFi";
+  const gpsLoc = (((DB.records.find(r => r.on && r.on.loc) || {}).on) || {}).loc || "办公区";
+  const fieldNote = (DB.teamToday.find(r => r.status === "field") || {}).note || "外勤";
+  const fieldLoc = (fieldNote.split("·")[1] || "").split("（")[0].trim() || "客户现场";
+  const LOC = { gps: gpsLoc, wifi: "办公 WiFi · " + wifiSsid, field: "客户现场 · " + fieldLoc };
+  const MICON = { gps: "map-pin", wifi: "wifi", field: "navigation" };
+
+  /* ---------- 筛选 ---------- */
+  function collectFilter() {
+    return {
+      date: $("#fDate").value,
+      dept: $("#fDept").value,
+      status: $("#fStatus").value,
+      kw: $("#fKw").value.trim()
+    };
+  }
+  function applyFilter(list, f) {
+    let out = list;
+    if (f.dept && f.dept !== "all") out = out.filter(r => r.dept === f.dept);
+    if (f.status && f.status !== "all") out = out.filter(r => r.status === f.status);
+    if (f.kw) out = out.filter(r => r.name.includes(f.kw) || r.empId.toUpperCase().includes(f.kw.toUpperCase()));
+    return out;
+  }
+  function metaText() {
+    const f = lastFilter || {};
+    const dept = f.dept && f.dept !== "all" ? f.dept : "全部部门";
+    const st = f.status && f.status !== "all" ? (DB.STATUS[f.status] || "") : "全部状态";
+    return `${f.date || DB.today} · ${dept} · ${st}`;
+  }
+
+  /* ---------- 表格 ---------- */
+  function onCellHtml(r) {
+    if (r.on) return `<div><span class="mono">${r.on}</span><div class="faint">${DB.METHOD[r.onMethod] || ""}</div></div>`;
+    return `<div><span class="faint">—</span>&nbsp;${App.statusBadge("missed")}</div>`;
+  }
+  function offCellHtml(r) {
+    if (r.off) return `<div><span class="mono">${r.off}</span><div class="faint">${DB.METHOD[r.offMethod] || ""}</div></div>`;
+    return `<span class="faint">待打卡</span>`;
+  }
+  function rowsHtml(list) {
+    return list.map(r => `<tr>
+      <td><div class="emp-cell"><div class="avatar">${r.name[0]}</div><div><b>${r.name}</b><div class="faint mono">${r.empId}</div></div></div></td>
+      <td>${r.dept}</td>
+      <td>${onCellHtml(r)}</td>
+      <td>${offCellHtml(r)}</td>
+      <td>${App.statusBadge(r.status)}</td>
+      <td>${r.note ? `<span class="sub">${r.note}</span>` : '<span class="faint">—</span>'}</td>
+      <td><button class="btn btn--sm btn--ghost" data-detail="${r.empId}"><i data-icon="eye" class="icon--sm"></i>详情</button></td>
+    </tr>`).join("");
+  }
+
+  function renderPager(pages) {
+    let h = `<span class="pagination__total">共 ${filtered.length} 条 · 每页 ${PAGE_SIZE} 条</span>
+      <span class="page page--nav" data-pg="prev"><i data-icon="chevron-left" class="icon--sm"></i></span>`;
+    for (let i = 1; i <= pages; i++) h += `<span class="page${i === curPage ? " active" : ""}" data-num="${i}">${i}</span>`;
+    h += `<span class="page page--nav" data-pg="next"><i data-icon="chevron-right" class="icon--sm"></i></span>`;
+    $("#pager").innerHTML = h;
+    App.renderIcons($("#pager"));
+  }
+
+  function renderPage() {
+    const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (curPage > pages) curPage = pages;
+    if (curPage < 1) curPage = 1;
+    const slice = filtered.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
+    $("#tbody").innerHTML = slice.length ? rowsHtml(slice)
+      : `<tr><td colspan="7"><div class="empty"><i data-icon="inbox"></i><p>没有符合条件的打卡记录</p></div></td></tr>`;
+    renderPager(pages);
+    App.renderIcons($("#tbody").closest(".table-wrap"));
+    $("#tableMeta").textContent = metaText();
+  }
+
+  /* ---------- 加载（loading → API → 渲染） ---------- */
+  async function load(f) {
+    lastFilter = f;
+    $("#tbody").innerHTML = `<tr><td colspan="7"><div class="empty"><i data-icon="refresh-cw"></i><p>正在加载打卡明细…</p></div></td></tr>`;
+    App.renderIcons($("#tbody"));
+    const res = await API.fetchTeamRecords(f);
+    filtered = applyFilter(res.data.list, f);
+    curPage = 1;
+    renderPage();
+    return filtered.length;
+  }
+
+  /* ---------- 详情弹窗 ---------- */
+  function approvalHtml(r) {
+    if (r.status === "field") {
+      const a = DB.approvals.find(x => x.type === "field" && x.empId === r.empId);
+      if (a) return `<div class="detail-appr"><i data-icon="file-text"></i>
+        <div class="detail-appr__main"><b><span class="mono">${a.id}</span> · ${a.typeName}</b>
+        <span class="sub">${a.target} · ${a.reasonType}</span></div>${App.statusBadge(a.status)}</div>`;
+    }
+    if (r.status === "absent") {
+      return `<div class="detail-appr"><i data-icon="calendar-check"></i>
+        <div class="detail-appr__main"><b>年假 · 已通过</b><span class="sub">${r.note || "请假已审批通过"}</span></div>${App.statusBadge("approved")}</div>`;
+    }
+    return `<span class="faint">当日无关联审批单</span>`;
+  }
+
+  function openDetail(empId) {
+    const r = DB.teamToday.find(x => x.empId === empId);
+    if (!r) return;
+    $("#detailBody").innerHTML = `
+      <div class="detail-head">
+        <div class="avatar avatar--lg">${r.name[0]}</div>
+        <div>
+          <div class="detail-name">${r.name} ${App.statusBadge(r.status)}</div>
+          <div class="sub">${r.dept} · 工号 <span class="mono">${r.empId}</span></div>
+        </div>
+      </div>
+      <div class="detail-sec"><i data-icon="clock"></i>打卡明细</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <span class="tl-dot${r.on ? " tl-dot--done" : ""}"></span>
+          <div class="tl-item__time">${r.on ? r.on : "— 未打卡"}</div>
+          <div class="tl-item__meta">${r.on
+            ? `<i data-icon="${MICON[r.onMethod] || "clock"}"></i>${DB.METHOD[r.onMethod] || ""} · ${LOC[r.onMethod] || ""}`
+            : "上班时段无打卡记录"}</div>
+        </div>
+        <div class="tl-item">
+          <span class="tl-dot${r.off ? " tl-dot--done" : ""}"></span>
+          <div class="tl-item__time">${r.off ? r.off : "待打卡"}</div>
+          <div class="tl-item__meta">${r.off
+            ? `<i data-icon="${MICON[r.offMethod] || "clock"}"></i>${DB.METHOD[r.offMethod] || ""} · ${LOC[r.offMethod] || ""}`
+            : "下班时段尚未打卡"}</div>
+        </div>
+      </div>
+      <div class="detail-sec"><i data-icon="file-text"></i>当日审批关联</div>
+      ${approvalHtml(r)}`;
+    App.openModal("modalDetail"); /* openModal 内部会渲染弹窗内图标 */
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  $("#btnQuery").addEventListener("click", async () => {
+    const f = collectFilter();
+    if (!f.date) { App.toast("日期为必填项，请先选择查询日期", "error"); return; }
+    const n = await load(f);
+    App.toast(`查询完成 · 共 ${n} 条`, "info");
+  });
+  $("#btnExport").addEventListener("click", () => App.toast("考勤明细已导出为 Excel", "success"));
+  $("#btnReset").addEventListener("click", async () => {
+    $("#fDate").value = DB.today;
+    $("#fDept").value = "all";
+    $("#fStatus").value = "all";
+    $("#fKw").value = "";
+    await load(collectFilter());
+    App.toast("筛选条件已重置", "info");
+  });
+  $("#pager").addEventListener("click", e => {
+    const num = e.target.closest("[data-num]");
+    if (num) { curPage = +num.dataset.num; renderPage(); return; }
+    const nav = e.target.closest("[data-pg]");
+    if (nav) { curPage += nav.dataset.pg === "next" ? 1 : -1; renderPage(); }
+  });
+  $("#tbody").addEventListener("click", e => {
+    const btn = e.target.closest("[data-detail]");
+    if (btn) openDetail(btn.dataset.detail);
+  });
+
+  /* ---------- 初始化 ---------- */
+  (async function init() {
+    $("#fDate").value = DB.today;
+    await load(collectFilter());
+  })();
+})();
+</script>
+</body>
+</html>

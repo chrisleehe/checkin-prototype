@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仪表盘 · 考勤签到系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* 页面级布局微调：颜色一律使用设计系统变量 */
+  .dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin: 16px 0; }
+  .kpi-row .empty { grid-column: 1 / -1; }
+  .stat-bar i.off { background: var(--border-strong); }           /* 周五：暂无数据灰柱 */
+  .dept-item { margin-bottom: 13px; }
+  .dept-item:last-child { margin-bottom: 0; }
+  .dept-item__top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 6px; }
+  .dept-item__top b { font-weight: 600; }
+  .dept-track { height: 8px; border-radius: 999px; background: var(--neutral-soft); overflow: hidden; }
+  .dept-fill { height: 100%; border-radius: 999px; background: var(--primary); animation: fillBar .8s cubic-bezier(.22,.7,.35,1) backwards; }
+  .dept-item:nth-child(2) .dept-fill { animation-delay: .05s }
+  .dept-item:nth-child(3) .dept-fill { animation-delay: .1s }
+  .dept-item:nth-child(4) .dept-fill { animation-delay: .15s }
+  .dept-item:nth-child(5) .dept-fill { animation-delay: .2s }
+  @keyframes fillBar { from { width: 0 } }
+  .emp-cell { display: flex; align-items: center; gap: 10px; }
+  .emp-cell b { font-weight: 600; }
+  .kpi__foot a { color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+  @media (max-width: 1024px) { .dash-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body data-page="dashboard">
+<div class="pc-app">
+  <aside class="pc-nav">
+    <div class="pc-nav__logo"><span class="pc-nav__logo-mark" data-icon="timer"></span>
+      <div><b>考勤签到系统</b><i>Attendance Console</i></div></div>
+    <div class="pc-nav__group-label">考勤管理</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="dashboard" href="p-dashboard.html"><i data-icon="layout-dashboard"></i>仪表盘</a>
+      <a class="pc-nav__link" data-nav="records" href="p-records.html"><i data-icon="calendar"></i>考勤记录</a>
+      <a class="pc-nav__link" data-nav="approval" href="p-approval.html"><i data-icon="clipboard-check"></i>审批中心</a>
+    </nav>
+    <div class="pc-nav__group-label">系统配置</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="rules" href="p-rules.html"><i data-icon="settings"></i>考勤规则</a>
+    </nav>
+    <a class="pc-nav__footer" href="../index.html"><i data-icon="arrow-left"></i>返回总览入口</a>
+  </aside>
+  <div class="pc-main">
+    <header class="pc-topbar">
+      <div class="pc-crumb">考勤管理 <i data-icon="chevron-right"></i> <b data-crumb>仪表盘</b></div>
+      <div class="pc-topbar__right"><span class="pc-topbar__date" id="topDate"></span>
+        <div class="avatar avatar--sm">王</div><span>王莉 · 系统管理员</span></div>
+    </header>
+    <main class="pc-content">
+
+      <!-- 页首 -->
+      <div class="pc-page-title reveal">
+        <h2 id="greet">早安，王莉</h2>
+        <span id="titleSub">今日出勤一览</span>
+      </div>
+
+      <!-- KPI 行（API.fetchDashboard → teamSummary） -->
+      <div class="kpi-row reveal d1" id="kpiRow">
+        <div class="empty"><i data-icon="refresh-cw"></i><p>正在加载今日概览…</p></div>
+      </div>
+
+      <!-- 中部两栏：本周趋势 + 部门出勤 -->
+      <div class="dash-grid reveal d2">
+        <div class="card">
+          <div class="card__head">
+            <div class="card__title"><i data-icon="bar-chart-3"></i>本周出勤趋势</div>
+            <span class="faint">出勤率（%）· — 为暂无数据</span>
+          </div>
+          <div class="card__body" id="trendBody">
+            <div class="empty"><i data-icon="refresh-cw"></i><p>趋势数据加载中…</p></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card__head">
+            <div class="card__title"><i data-icon="building-2"></i>部门出勤</div>
+            <span class="faint">今日在岗 / 总人数</span>
+          </div>
+          <div class="card__body" id="deptBody">
+            <div class="empty"><i data-icon="refresh-cw"></i><p>部门数据加载中…</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 今日异常与待办（DB.teamToday 过滤非 normal） -->
+      <div class="card reveal d3">
+        <div class="card__head">
+          <div class="card__title"><i data-icon="alert-triangle"></i>今日异常与待办</div>
+          <span class="faint">来源：移动端实时打卡</span>
+        </div>
+        <div class="card__body" id="exBody">
+          <div class="empty"><i data-icon="refresh-cw"></i><p>异常清单加载中…</p></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+
+  /* ---------- KPI 行 ---------- */
+  function renderKpi(s) {
+    const pending = DB.approvals.filter(a => a.status === "pending").length;
+    const fieldPending = DB.approvals.filter(a => a.type === "field" && a.status === "pending").length;
+    $("#kpiRow").innerHTML = `
+      <div class="kpi">
+        <div class="kpi__label"><i data-icon="users"></i>今日出勤率</div>
+        <div class="kpi__num">${s.rate}</div>
+        <div class="kpi__foot">已到 <span class="mono">${s.present}/${s.total}</span> 人 · 较昨日 <span class="down">-8.4%</span></div>
+      </div>
+      <div class="kpi kpi--warn">
+        <div class="kpi__label"><i data-icon="clock"></i>今日迟到</div>
+        <div class="kpi__num">${s.late}<small>人</small></div>
+        <div class="kpi__foot">其中严重迟到 ${s.severeLate} 人</div>
+      </div>
+      <div class="kpi kpi--info">
+        <div class="kpi__label"><i data-icon="clipboard-check"></i>待审批</div>
+        <div class="kpi__num">${pending}<small>单</small></div>
+        <div class="kpi__foot"><a href="p-approval.html">前往审批中心处理 <i data-icon="chevron-right" class="icon--sm"></i></a></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label"><i data-icon="navigation"></i>今日外勤</div>
+        <div class="kpi__num">${s.field}<small>人</small></div>
+        <div class="kpi__foot">外勤打卡待审批 ${fieldPending} 单</div>
+      </div>`;
+    App.renderIcons($("#kpiRow"));
+  }
+
+  /* ---------- 本周出勤趋势（柱高按 rate 比例） ---------- */
+  function renderTrend(trend) {
+    $("#trendBody").innerHTML = `<div class="stat-bars">` + trend.map(d => {
+      const label = d.day.split(" ")[0];
+      if (!d.rate) return `<div class="stat-bar"><i class="off" style="height:10px"><em>—</em></i><span>${label}</span></div>`;
+      return `<div class="stat-bar"><i style="height:${d.rate}%"><em>${d.rate}%</em></i><span>${label}</span></div>`;
+    }).join("") + `</div>`;
+  }
+
+  /* ---------- 部门出勤横条 ---------- */
+  function renderDept(rank) {
+    $("#deptBody").innerHTML = rank.map(d => {
+      const pct = Math.round(d.present / d.total * 1000) / 10;
+      return `<div class="dept-item">
+        <div class="dept-item__top"><b>${d.dept}</b><span class="mono sub">${d.present}/${d.total} · ${pct}%</span></div>
+        <div class="dept-track"><div class="dept-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join("");
+  }
+
+  /* ---------- 今日异常与待办 ---------- */
+  function lateMinutes(r) {
+    if (!r.on) return 0;
+    const rule = DB.rules.find(x => x.scope.includes(r.dept)) || DB.rules[0];
+    const [sh, sm] = rule.onDuty.split(":").map(Number);
+    const [h, m] = r.on.split(":").map(Number);
+    return h * 60 + m - (sh * 60 + sm);
+  }
+
+  function renderExceptions() {
+    const list = DB.teamToday.filter(r => r.status !== "normal");
+    const rows = list.map(r => {
+      let desc = r.note;
+      if (!desc && (r.status === "late" || r.status === "severeLate")) desc = `迟到 ${lateMinutes(r)} 分钟`;
+      let act;
+      if (r.status === "late" || r.status === "severeLate") {
+        act = `<button class="btn btn--sm btn--ghost" data-remind="${r.empId}"><i data-icon="send" class="icon--sm"></i>提醒</button>`;
+      } else if (r.status === "field") {
+        act = `<a class="btn btn--sm btn--ghost" href="p-approval.html">去审批 <i data-icon="chevron-right" class="icon--sm"></i></a>`;
+      } else {
+        act = `<span class="faint">年假（已通过）</span>`;
+      }
+      return `<tr>
+        <td><div class="emp-cell"><div class="avatar">${r.name[0]}</div><div><b>${r.name}</b><div class="faint mono">${r.empId}</div></div></div></td>
+        <td>${r.dept}</td>
+        <td>${App.statusBadge(r.status)}</td>
+        <td><span class="sub">${desc || "—"}</span></td>
+        <td>${act}</td>
+      </tr>`;
+    }).join("");
+    $("#exBody").innerHTML = `<div class="table-wrap"><table class="table">
+      <thead><tr><th>员工</th><th>部门</th><th>状态</th><th>说明</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+    App.renderIcons($("#exBody"));
+  }
+
+  /* “提醒”按钮 → 企业微信提醒 */
+  $("#exBody").addEventListener("click", e => {
+    if (e.target.closest("[data-remind]")) App.toast("已发送企业微信提醒", "success");
+  });
+
+  /* ---------- 初始化：异步加载 + loading 态 ---------- */
+  async function init() {
+    $("#greet").textContent = "早安，" + DB.admin.name;
+    $("#titleSub").innerHTML = `今日出勤一览 · <span class="mono">${DB.today}</span> ${DB.todayWeek}`;
+    const res = await API.fetchDashboard();
+    const { teamSummary, weekTrend, deptRank } = res.data;
+    renderKpi(teamSummary);
+    renderTrend(weekTrend);
+    renderDept(deptRank);
+    renderExceptions();
+  }
+  init();
+})();
+</script>
+</body>
+</html>

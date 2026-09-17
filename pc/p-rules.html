@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考勤规则 · 考勤签到系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* —— 页面级布局微调（颜色一律使用 styles.css 设计变量）—— */
+  .stack { display: flex; flex-direction: column; gap: 20px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .pc-page-title__actions { margin-left: auto; align-self: center; display: flex; align-items: center; gap: 10px; }
+  .flex-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .input--narrow { width: 110px; flex: none; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+  .field-doc-scroll { overflow-x: auto; }
+  @media (max-width: 768px) { .input--narrow { width: 100%; flex: 1; } }
+</style>
+</head>
+<body data-page="rules">
+<div class="pc-app">
+  <aside class="pc-nav">
+    <div class="pc-nav__logo"><span class="pc-nav__logo-mark" data-icon="timer"></span>
+      <div><b>考勤签到系统</b><i>Attendance Console</i></div></div>
+    <div class="pc-nav__group-label">考勤管理</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="dashboard" href="p-dashboard.html"><i data-icon="layout-dashboard"></i>仪表盘</a>
+      <a class="pc-nav__link" data-nav="records" href="p-records.html"><i data-icon="calendar"></i>考勤记录</a>
+      <a class="pc-nav__link" data-nav="approval" href="p-approval.html"><i data-icon="clipboard-check"></i>审批中心</a>
+    </nav>
+    <div class="pc-nav__group-label">系统配置</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="rules" href="p-rules.html"><i data-icon="settings"></i>考勤规则</a>
+    </nav>
+    <a class="pc-nav__footer" href="../index.html"><i data-icon="arrow-left"></i>返回总览入口</a>
+  </aside>
+  <div class="pc-main">
+    <header class="pc-topbar">
+      <div class="pc-crumb">系统配置 <i data-icon="chevron-right"></i> <b data-crumb>考勤规则</b></div>
+      <div class="pc-topbar__right"><span class="pc-topbar__date" id="topDate"></span>
+        <div class="avatar avatar--sm">王</div><span>王莉 · 系统管理员</span></div>
+    </header>
+    <main class="pc-content">
+
+      <div class="pc-page-title reveal">
+        <h2>考勤规则</h2><span>打卡判定与规则的唯一来源</span>
+        <div class="pc-page-title__actions">
+          <button class="btn btn--primary" id="btnNew" type="button"><i data-icon="plus"></i>新建规则</button>
+        </div>
+      </div>
+
+      <div class="stack">
+
+        <!-- ① 规则列表 -->
+        <section class="reveal d1">
+          <div class="section-head">
+            <div class="card__title"><i data-icon="settings"></i>规则列表</div>
+            <span class="faint">数据源 DB.rules · 共 <span class="mono" id="ruleCount">3</span> 条</span>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>规则 ID</th><th>规则名称</th><th>适用范围</th><th>工作时间</th>
+                  <th>打卡方式</th><th>适用人数</th><th>状态</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="rulesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ② 规则配置表单 -->
+        <section class="card reveal d2" id="formCard">
+          <div class="card__head">
+            <div class="card__title"><i data-icon="edit-3"></i>规则配置表单</div>
+            <span class="faint mono" id="formMode">编辑模式 · RULE-001</span>
+          </div>
+          <div class="card__body">
+            <div class="info-strip"><i data-icon="alert-triangle"></i>修改规则不影响历史已生成记录，仅对次日后打卡生效</div>
+
+            <div class="form-grid" id="ruleForm" style="margin-top:16px">
+
+              <div class="field span-2" data-required>
+                <div class="field__label"><span class="req-star">*</span>规则名称 <span class="badge badge--req">必填</span></div>
+                <input class="input" id="fName" type="text" maxlength="20" placeholder="如：总部标准考勤（默认）">
+                <div class="field__hint">2-20 字，企业内唯一</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请填写规则名称（2-20 字）</div>
+              </div>
+
+              <div class="field span-2" data-required>
+                <div class="field__label"><span class="req-star">*</span>适用部门 <span class="badge badge--req">必填</span></div>
+                <div class="seg" data-type="checkbox" id="fDepts">
+                  <span class="seg__item" data-type="checkbox" data-v="产品设计部"><span class="seg__dot"></span>产品设计部</span>
+                  <span class="seg__item" data-type="checkbox" data-v="研发中心"><span class="seg__dot"></span>研发中心</span>
+                  <span class="seg__item" data-type="checkbox" data-v="市场运营部"><span class="seg__dot"></span>市场运营部</span>
+                  <span class="seg__item" data-type="checkbox" data-v="客户成功部"><span class="seg__dot"></span>客户成功部</span>
+                  <span class="seg__item" data-type="checkbox" data-v="人力资源部"><span class="seg__dot"></span>人力资源部</span>
+                </div>
+                <div class="field__hint">多选 · 至少 1 个部门；一个部门同一时段仅可绑定一条启用中的规则</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请至少选择 1 个适用部门</div>
+              </div>
+
+              <div class="field span-2" data-required>
+                <div class="field__label"><span class="req-star">*</span>工作日 <span class="badge badge--req">必填</span></div>
+                <div class="seg" data-type="checkbox" id="fWorkdays">
+                  <span class="seg__item" data-type="checkbox" data-v="1"><span class="seg__dot"></span>周一</span>
+                  <span class="seg__item" data-type="checkbox" data-v="2"><span class="seg__dot"></span>周二</span>
+                  <span class="seg__item" data-type="checkbox" data-v="3"><span class="seg__dot"></span>周三</span>
+                  <span class="seg__item" data-type="checkbox" data-v="4"><span class="seg__dot"></span>周四</span>
+                  <span class="seg__item" data-type="checkbox" data-v="5"><span class="seg__dot"></span>周五</span>
+                  <span class="seg__item" data-type="checkbox" data-v="6"><span class="seg__dot"></span>周六</span>
+                  <span class="seg__item" data-type="checkbox" data-v="0"><span class="seg__dot"></span>周日</span>
+                </div>
+                <div class="field__hint">多选 · 至少 1 天；未勾选的日期视为休息日，自动免打卡</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请至少选择 1 个工作日</div>
+              </div>
+
+              <div class="field" data-required>
+                <div class="field__label"><span class="req-star">*</span>上班时间 <span class="badge badge--req">必填</span></div>
+                <input class="input" id="fOn" type="time">
+                <div class="field__hint">默认 09:00，须早于下班时间</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请选择上班时间</div>
+              </div>
+
+              <div class="field" data-required>
+                <div class="field__label"><span class="req-star">*</span>下班时间 <span class="badge badge--req">必填</span></div>
+                <input class="input" id="fOff" type="time">
+                <div class="field__hint">默认 18:00，须晚于上班时间</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请选择下班时间</div>
+              </div>
+
+              <div class="field" data-required>
+                <div class="field__label"><span class="req-star">*</span>迟到宽限 <span class="badge badge--req">必填</span></div>
+                <select class="select" id="fGrace">
+                  <option value="">请选择宽限时长</option>
+                  <option value="0">0 分钟（不宽限）</option>
+                  <option value="5">5 分钟</option>
+                  <option value="10">10 分钟</option>
+                  <option value="15">15 分钟</option>
+                  <option value="30">30 分钟</option>
+                </select>
+                <div class="field__hint">超过宽限即记迟到，默认 10 分钟</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请选择迟到宽限时长</div>
+              </div>
+
+              <div class="field" data-required>
+                <div class="field__label"><span class="req-star">*</span>打卡方式 <span class="badge badge--req">必填</span></div>
+                <div class="seg" id="fMethod">
+                  <span class="seg__item" data-v="gps"><span class="seg__dot"></span>GPS 定位</span>
+                  <span class="seg__item" data-v="wifi"><span class="seg__dot"></span>办公 WiFi</span>
+                  <span class="seg__item" data-v="both"><span class="seg__dot"></span>两者均可</span>
+                </div>
+                <div class="field__hint">单选 · 决定下方两个条件必填字段是否启用</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>请选择打卡方式</div>
+              </div>
+
+              <div class="field" id="fieldGps">
+                <div class="field__label">GPS 打卡范围 <span class="badge badge--cond">条件必填</span></div>
+                <input class="input" id="fGps" type="number" min="100" max="3000" step="10" placeholder="100 - 3000">
+                <div class="field__hint">打卡方式含 GPS 时必填 · 100-3000 米，默认 500</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>打卡方式含 GPS，请填写 100-3000 米的范围</div>
+              </div>
+
+              <div class="field" id="fieldWifi">
+                <div class="field__label">WiFi 白名单 <span class="badge badge--cond">条件必填</span></div>
+                <input class="input" id="fWifi" type="text" placeholder="如：HQ-Office-5G, HQ-Office-2.4G">
+                <div class="field__hint">打卡方式含办公 WiFi 时必填 · 逗号分隔多个 SSID</div>
+                <div class="field__error-msg"><i data-icon="alert-triangle"></i>打卡方式含 WiFi，请至少填写 1 个 SSID</div>
+              </div>
+
+              <div class="field">
+                <div class="field__label">弹性工作 <span class="badge badge--opt">选填</span></div>
+                <div class="flex-inline">
+                  <div class="seg" id="fFlex">
+                    <span class="seg__item" data-v="off">关闭</span>
+                    <span class="seg__item" data-v="on">开启</span>
+                  </div>
+                  <input class="input input--narrow" id="fFlexMin" type="number" min="0" max="120" placeholder="0-120">
+                  <span class="faint">分钟</span>
+                </div>
+                <div class="field__hint">开启后可在上班时间前后 ±N 分钟内打卡不计迟到 · 0-120 分钟</div>
+              </div>
+
+              <div class="field">
+                <div class="field__label">补卡次数上限 <span class="badge badge--opt">选填</span></div>
+                <select class="select" id="fMakeup">
+                  <option value="">请选择</option>
+                  <option value="1">1 次/月</option>
+                  <option value="2">2 次/月</option>
+                  <option value="3">3 次/月</option>
+                  <option value="4">4 次/月</option>
+                  <option value="5">5 次/月</option>
+                  <option value="6">6 次/月</option>
+                  <option value="7">7 次/月</option>
+                  <option value="8">8 次/月</option>
+                  <option value="9">9 次/月</option>
+                  <option value="10">10 次/月</option>
+                </select>
+                <div class="field__hint">默认 3 次/月，超出上限不再受理线上补卡</div>
+              </div>
+
+              <div class="field span-2">
+                <div class="field__label">法定节假日自动免打卡 <span class="badge badge--opt">选填</span></div>
+                <div class="seg" id="fHoliday">
+                  <span class="seg__item" data-v="on">开启</span>
+                  <span class="seg__item" data-v="off">关闭</span>
+                </div>
+                <div class="field__hint">开启后法定节假日自动免打卡且不计缺勤，默认开启</div>
+              </div>
+
+              <div class="field span-2">
+                <div class="field__label">规则备注 <span class="badge badge--opt">选填</span></div>
+                <textarea class="textarea" id="fRemark" maxlength="200" placeholder="选填：规则适用说明、特殊排班说明等，最多 200 字"></textarea>
+              </div>
+
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn--primary" id="btnSave" type="button"><i data-icon="check"></i>保存规则</button>
+              <button class="btn btn--ghost" id="btnReset" type="button"><i data-icon="refresh-cw"></i>重置</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ③ 判定规则说明 -->
+        <section class="rule-note reveal d3">
+          <h4><i data-icon="shield-check"></i>打卡判定规则说明（示例：总部标准考勤 · 09:00-18:00 · 宽限 10 分钟）</h4>
+          <ol>
+            <li><b>正常</b>：上班卡 ≤ <span class="mono">09:10</span>（<span class="mono">09:00</span> + 宽限 10 分钟）且下班卡 ≥ <span class="mono">18:00</span>。</li>
+            <li><b>迟到</b>：上班卡晚于 <span class="mono">09:10</span>。</li>
+            <li><b>严重迟到</b>：上班卡晚于 <span class="mono">09:30</span>，系统自动抄送直属上级。</li>
+            <li><b>早退</b>：下班卡早于 <span class="mono">18:00</span>。</li>
+            <li><b>缺卡</b>：当日仅一边有打卡记录（上/下班单边缺卡）。</li>
+            <li><b>旷工</b>：全天无卡，且无已通过的补卡 / 请假申请。</li>
+            <li><b>外勤</b>：GPS 不在打卡范围（500m）时记外勤，必须附现场照片 + 事由并经审批通过。</li>
+            <li><b>工时</b>：按上/下班卡间隔计算，扣除午休 1 小时（<span class="mono">12:00-13:00</span>）。</li>
+          </ol>
+        </section>
+
+        <!-- ④ 字段说明表 -->
+        <section class="field-doc reveal d4">
+          <div class="field-doc__title"><i data-icon="file-text"></i>字段说明 · 规则配置表单</div>
+          <div class="field-doc-scroll">
+            <table>
+              <thead>
+                <tr><th>字段</th><th>必填性</th><th>类型格式</th><th>校验规则与默认值</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>规则名称</td><td><span class="badge badge--req">必填</span></td><td>文本输入</td><td>2-20 字，企业内唯一；默认「总部标准考勤（默认）」</td></tr>
+                <tr><td>适用部门</td><td><span class="badge badge--req">必填</span></td><td>多选胶囊（复选）</td><td>至少选择 1 个部门；预填产品设计部 / 研发中心 / 市场运营部 / 人力资源部</td></tr>
+                <tr><td>工作日</td><td><span class="badge badge--req">必填</span></td><td>多选胶囊（复选）</td><td>周一~周日至少选择 1 天；默认周一至周五</td></tr>
+                <tr><td>上班时间</td><td><span class="badge badge--req">必填</span></td><td>时间 HH:mm</td><td>默认 09:00，须早于下班时间</td></tr>
+                <tr><td>下班时间</td><td><span class="badge badge--req">必填</span></td><td>时间 HH:mm</td><td>默认 18:00，须晚于上班时间</td></tr>
+                <tr><td>迟到宽限</td><td><span class="badge badge--req">必填</span></td><td>下拉单选</td><td>0 / 5 / 10 / 15 / 30 分钟；默认 10 分钟，超过宽限即记迟到</td></tr>
+                <tr><td>打卡方式</td><td><span class="badge badge--req">必填</span></td><td>单选胶囊</td><td>GPS 定位 / 办公 WiFi / 两者均可；默认「两者均可」</td></tr>
+                <tr><td>GPS 打卡范围</td><td><span class="badge badge--cond">条件必填</span></td><td>数字输入（米）</td><td>触发条件：打卡方式含 GPS；100-3000 的整数，默认 500</td></tr>
+                <tr><td>WiFi 白名单</td><td><span class="badge badge--cond">条件必填</span></td><td>文本输入</td><td>触发条件：打卡方式含办公 WiFi；逗号分隔多个 SSID</td></tr>
+                <tr><td>弹性工作</td><td><span class="badge badge--opt">选填</span></td><td>单选胶囊 + 数字</td><td>关闭 / 开启；0-120 分钟，默认关闭（0 分钟）</td></tr>
+                <tr><td>补卡次数上限</td><td><span class="badge badge--opt">选填</span></td><td>下拉单选</td><td>1-10；默认 3 次/月</td></tr>
+                <tr><td>法定节假日自动免打卡</td><td><span class="badge badge--opt">选填</span></td><td>单选胶囊</td><td>开启 / 关闭；默认开启</td></tr>
+                <tr><td>规则备注</td><td><span class="badge badge--opt">选填</span></td><td>多行文本</td><td>最多 200 字，仅系统管理员可见</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="field-doc__note">条件必填字段在校验时随「打卡方式」联动判断：含 GPS 则「GPS 打卡范围」必填，含办公 WiFi 则「WiFi 白名单」必填，选择「两者均可」时两者均必填。</div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const DAY = { 1: "周一", 2: "周二", 3: "周三", 4: "周四", 5: "周五", 6: "周六", 0: "周日" };
+  let current = null; // 当前表单载入的规则对象（null = 新建空表单）
+
+  /* ---------- seg 胶囊读写 ---------- */
+  const segVals = sel => Array.from($(sel).querySelectorAll(".seg__item.on")).map(i => i.dataset.v);
+  const segVal = sel => segVals(sel)[0] || "";
+  const setSeg = (sel, vals) => {
+    const arr = (vals || []).map(String);
+    $(sel).querySelectorAll(".seg__item").forEach(i => i.classList.toggle("on", arr.includes(i.dataset.v)));
+  };
+
+  /* ---------- 列表渲染（数据源 DB.rules）---------- */
+  const weekText = days => {
+    if (days.length === 7) return "周一至周日";
+    const set = new Set(days);
+    if (days.length === 5 && [1, 2, 3, 4, 5].every(d => set.has(d))) return "周一至周五";
+    return days.map(d => DAY[d]).join("、");
+  };
+  const methodText = r => {
+    const g = r.clockMethods.includes("gps"), w = r.clockMethods.includes("wifi");
+    if (g && w) return "GPS·WiFi 组合";
+    if (g) return `GPS · <span class="mono">${r.gpsRange}m</span>`;
+    return "办公 WiFi";
+  };
+  function renderTable() {
+    $("#rulesBody").innerHTML = DB.rules.map(r => {
+      const scope = `${App.esc(r.scope.slice(0, 2).join("、"))}${r.scope.length > 2 ? ` <span class="faint">等 ${r.scope.length} 个部门</span>` : ""}`;
+      const st = r.status === "active"
+        ? `<span class="st st--approved">启用中</span>`
+        : `<span class="st st--off">已停用</span>`;
+      return `<tr>
+        <td class="mono">${r.id}</td>
+        <td><b>${App.esc(r.name)}</b><div class="faint">更新于 ${r.updated}</div></td>
+        <td>${scope}</td>
+        <td><span class="mono">${r.onDuty}-${r.offDuty}</span><div class="faint">${weekText(r.workdays)}</div></td>
+        <td>${methodText(r)}</td>
+        <td class="mono">${r.usedBy} 人</td>
+        <td>${st}</td>
+        <td><button class="btn btn--sm btn--ghost js-edit" type="button" data-id="${r.id}"><i data-icon="edit-3"></i>编辑</button></td>
+      </tr>`;
+    }).join("");
+    $("#ruleCount").textContent = DB.rules.length;
+    App.renderIcons($("#rulesBody"));
+  }
+
+  /* ---------- 表单填充 / 重置 ---------- */
+  function clearErrors() {
+    document.querySelectorAll("#ruleForm .field").forEach(f => f.classList.remove("field--error"));
+  }
+  function fillForm(rule) {
+    current = rule || null;
+    $("#formMode").textContent = current ? `编辑模式 · ${current.id}` : "新建模式 · 未保存";
+    $("#fName").value = current ? current.name : "";
+    setSeg("#fDepts", current ? current.scope : []);
+    setSeg("#fWorkdays", current ? current.workdays : []);
+    $("#fOn").value = current ? current.onDuty : "";
+    $("#fOff").value = current ? current.offDuty : "";
+    $("#fGrace").value = current ? String(current.graceMinutes) : "";
+    const both = current && current.clockMethods.includes("gps") && current.clockMethods.includes("wifi");
+    setSeg("#fMethod", current ? [both ? "both" : current.clockMethods[0]] : []);
+    $("#fGps").value = current && current.gpsRange != null ? String(current.gpsRange) : "";
+    $("#fWifi").value = current ? current.wifiSsids.join(", ") : "";
+    setSeg("#fFlex", current ? [current.flexible.enabled ? "on" : "off"] : []);
+    $("#fFlexMin").value = current ? String(current.flexible.minutes) : "";
+    $("#fMakeup").value = current ? String(current.makeupLimit) : "";
+    setSeg("#fHoliday", current ? [current.autoHoliday ? "on" : "off"] : []);
+    $("#fRemark").value = "";
+    syncCondRequired();
+    clearErrors();
+  }
+
+  /* ---------- 条件必填联动（随打卡方式判断）---------- */
+  function setRequired(field, need) {
+    if (need) field.setAttribute("data-required", "");
+    else { field.removeAttribute("data-required"); field.classList.remove("field--error"); }
+  }
+  function syncCondRequired() {
+    const m = segVal("#fMethod");
+    setRequired($("#fieldGps"), m === "gps" || m === "both");
+    setRequired($("#fieldWifi"), m === "wifi" || m === "both");
+  }
+
+  /* ---------- 收集表单数据 ---------- */
+  function collectForm() {
+    const m = segVal("#fMethod");
+    return {
+      id: current ? current.id : "",
+      name: $("#fName").value.trim(),
+      scope: segVals("#fDepts"),
+      workdays: segVals("#fWorkdays").map(Number),
+      onDuty: $("#fOn").value,
+      offDuty: $("#fOff").value,
+      graceMinutes: Number($("#fGrace").value || 0),
+      clockMethods: m === "both" ? ["gps", "wifi"] : (m ? [m] : []),
+      gpsRange: $("#fGps").value === "" ? null : Number($("#fGps").value),
+      wifiSsids: $("#fWifi").value.split(",").map(s => s.trim()).filter(Boolean),
+      flexible: { enabled: segVal("#fFlex") === "on", minutes: Number($("#fFlexMin").value || 0) },
+      makeupLimit: $("#fMakeup").value === "" ? 3 : Number($("#fMakeup").value),
+      autoHoliday: segVal("#fHoliday") === "on",
+      remark: $("#fRemark").value.trim()
+    };
+  }
+
+  /* ---------- 事件 ---------- */
+  /* 列表"编辑"：载入规则到表单 */
+  $("#rulesBody").addEventListener("click", e => {
+    const btn = e.target.closest(".js-edit"); if (!btn) return;
+    const rule = DB.rules.find(r => r.id === btn.dataset.id); if (!rule) return;
+    fillForm(rule);
+    App.toast(`已载入规则：${rule.name}`, "info");
+    $("#formCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* "新建规则"：滚到表单区并重置为空表单态 */
+  $("#btnNew").addEventListener("click", () => {
+    fillForm(null);
+    App.toast("已进入新建规则模式，请填写后保存", "info");
+    $("#formCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* "重置"：恢复为当前载入规则的原始值（新建态则清空） */
+  $("#btnReset").addEventListener("click", () => {
+    fillForm(current);
+    App.toast("表单已重置", "info");
+  });
+
+  /* 输入/切换胶囊时即时清除标红；打卡方式切换时联动条件必填 */
+  $("#ruleForm").addEventListener("input", e => {
+    const f = e.target.closest(".field"); if (f) f.classList.remove("field--error");
+  });
+  $("#ruleForm").addEventListener("segchange", e => {
+    const f = e.target.closest(".field"); if (f) f.classList.remove("field--error");
+    if (e.target.id === "fMethod") syncCondRequired();
+  });
+
+  /* "保存规则"：必填校验 → API 桩 → toast */
+  $("#btnSave").addEventListener("click", async () => {
+    syncCondRequired();
+    if (!App.validate($("#ruleForm"))) { App.toast("存在必填项未填写，请检查标红字段", "error"); return; }
+    const btn = $("#btnSave"), html = btn.innerHTML;
+    btn.disabled = true; btn.classList.add("btn--disabled"); btn.textContent = "保存中…";
+    const res = await API.saveRule(collectForm());
+    btn.disabled = false; btn.classList.remove("btn--disabled"); btn.innerHTML = html; App.renderIcons(btn);
+    if (res.code === 0) App.toast("规则已保存 · 新规则次日 00:00 生效", "success");
+  });
+
+  /* ---------- 初始化（预填 RULE-001 演示已填态）---------- */
+  renderTable();
+  fillForm(DB.rules[0]);
+})();
+</script>
+</body>
+</html>

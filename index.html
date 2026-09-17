@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>签到打卡系统 · 原型总览</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+/* ===== 总览页专属布局 ===== */
+.ov-wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 72px; }
+.ov-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 36px; flex-wrap: wrap; }
+.ov-hero h1 { font-size: 34px; letter-spacing: 1px; }
+.ov-hero h1 em { font-style: normal; color: var(--primary); }
+.ov-hero p { color: var(--text-sub); margin-top: 8px; max-width: 560px; }
+.ov-tag { display: inline-flex; gap: 8px; margin-bottom: 14px; }
+.ov-section-title { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; margin: 44px 0 18px; }
+.ov-section-title [data-icon] { color: var(--primary); width: 20px; height: 20px; }
+.ov-section-title small { font-weight: 400; color: var(--text-faint); font-size: 12.5px; margin-left: 4px; }
+
+.surfaces { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.surface-card { border-radius: var(--radius-lg); padding: 26px; color: #fff; position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s; display: block; }
+.surface-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.surface-card--m { background: linear-gradient(140deg, #10403A, #0E7C6B 120%); }
+.surface-card--p { background: linear-gradient(140deg, #17201E, #33413D 130%); }
+.surface-card__icon { width: 46px; height: 46px; border-radius: 13px; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.surface-card__icon [data-icon] { width: 24px; height: 24px; }
+.surface-card h3 { font-size: 19px; margin-bottom: 4px; }
+.surface-card p { font-size: 12.5px; opacity: .75; margin-bottom: 16px; }
+.page-chips { display: flex; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1; }
+.page-chip { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18); padding: 5px 12px; border-radius: 999px; font-size: 12.5px; transition: background .16s; }
+.page-chip:hover { background: rgba(255,255,255,.28); }
+
+.legend-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.legend-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px 16px; box-shadow: var(--shadow-sm); text-align: center; }
+.legend-card b { display: block; font-size: 13.5px; margin: 10px 0 4px; }
+.legend-card span { font-size: 12px; color: var(--text-sub); line-height: 1.6; display: block; }
+
+.ov-grid-2 { display: grid; grid-template-columns: 1.05fr .95fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .surfaces, .ov-grid-2 { grid-template-columns: 1fr; } .legend-cards { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body data-page="overview">
+<div class="ov-wrap">
+
+  <!-- ===== Hero ===== -->
+  <header class="ov-hero reveal">
+    <div>
+      <div class="ov-tag">
+        <span class="badge badge--sys">交互原型 · 可点击</span>
+        <span class="badge badge--auto">纯静态 · 离线可开</span>
+        <span class="badge badge--req">含字段必填标注</span>
+      </div>
+      <h1>签到打卡系统 <em>·</em> 原型总览</h1>
+      <p>覆盖<b>移动端员工打卡</b>与 <b>PC 管理端</b>两套界面：员工侧完成上下班打卡、外勤、补卡申请与个人统计；管理侧完成考勤监控、记录查询、审批与规则配置。所有表单字段均标注必填性，判定规则全站统一。</p>
+    </div>
+    <div class="card" style="padding:14px 18px; font-size:12.5px; color:var(--text-sub)">
+      <div class="mono" style="font-size:13px">基准演示日期 <b style="color:var(--text)">2026-09-17 周四</b></div>
+      <div style="margin-top:4px">演示员工：陈晓雯 · 产品设计部</div>
+      <div style="margin-top:4px">演示管理员：王莉 · 系统管理员</div>
+    </div>
+  </header>
+
+  <!-- ===== 双端入口 ===== -->
+  <div class="reveal d1">
+    <div class="surfaces">
+      <a class="surface-card surface-card--m" href="mobile/m-index.html">
+        <div class="surface-card__icon"><i data-icon="smartphone"></i></div>
+        <h3>移动端 · 员工打卡</h3>
+        <p>上下班打卡 / 外勤打卡 / 月度记录 / 补卡请假申请 / 个人统计</p>
+        <div class="page-chips">
+          <span class="page-chip">① 打卡首页</span><span class="page-chip">② 考勤记录</span>
+          <span class="page-chip">③ 申请（必填标注重点）</span><span class="page-chip">④ 我的统计</span>
+        </div>
+      </a>
+      <a class="surface-card surface-card--p" href="pc/p-dashboard.html">
+        <div class="surface-card__icon"><i data-icon="monitor"></i></div>
+        <h3>PC 端 · 管理控制台</h3>
+        <p>出勤仪表盘 / 团队考勤记录 / 补卡外勤审批 / 考勤规则配置</p>
+        <div class="page-chips">
+          <span class="page-chip">① 仪表盘</span><span class="page-chip">② 考勤记录</span>
+          <span class="page-chip">③ 审批中心</span><span class="page-chip">④ 考勤规则（必填标注重点）</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 字段标注图例 ===== -->
+  <div class="reveal d2">
+    <h2 class="ov-section-title"><i data-icon="shield-check"></i>字段标注图例<small>· 全站表单统一使用</small></h2>
+    <div class="legend-cards">
+      <div class="legend-card"><span class="badge badge--req">必填</span><b>必填</b><span>留空无法提交<br>提交时校验并标红</span></div>
+      <div class="legend-card"><span class="badge badge--opt">选填</span><b>选填</b><span>可留空<br>不影响提交</span></div>
+      <div class="legend-card"><span class="badge badge--cond">条件必填</span><b>条件必填</b><span>仅在特定选项开启时<br>才转为必填</span></div>
+      <div class="legend-card"><span class="badge badge--auto">自动获取</span><b>自动获取</b><span>系统自动采集<br>（时间/定位/WiFi）</span></div>
+      <div class="legend-card"><span class="badge badge--sys">系统生成</span><b>系统生成</b><span>只读展示<br>（单号/审批流）</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 核心规则 + 页面地图 ===== -->
+  <div class="reveal d3">
+    <h2 class="ov-section-title"><i data-icon="clipboard-check"></i>核心考勤规则速览<small>· 以「总部标准考勤（默认规则）」为例</small></h2>
+    <div class="ov-grid-2">
+      <div class="rule-note">
+        <h4><i data-icon="timer"></i>打卡与判定规则</h4>
+        <ol>
+          <li><b>正常出勤：</b>上班卡 ≤ <span class="mono">09:10</span>（09:00 + 宽限 10 分钟），下班卡 ≥ <span class="mono">18:00</span>。</li>
+          <li><b>迟到 / 严重迟到：</b><span class="mono">09:10</span> 后打卡记迟到；<span class="mono">09:30</span> 后记<b>严重迟到</b>并抄送直属上级。</li>
+          <li><b>早退：</b>工作日 <span class="mono">18:00</span> 前打下班卡记早退。</li>
+          <li><b>缺卡 / 旷工：</b>仅一边有卡记缺卡；全天无卡且无已通过的补卡/请假记旷工。</li>
+          <li><b>外勤打卡：</b>GPS 不在打卡范围（500m）时记外勤，<b>必须</b>附现场照片 + 事由，经直属上级审批。</li>
+          <li><b>补卡：</b>每人每月 ≤ 3 次，须于次日 <span class="mono">18:00</span> 前提交，走「直属上级 → HR」二级审批。</li>
+          <li><b>有效工时：</b>上/下班卡间隔扣除午休 1 小时（12:00–13:00）。</li>
+          <li><b>打卡方式：</b>GPS 定位（范围 500m）或办公 WiFi（HQ-Office-5G / 2.4G）二者任一。</li>
+        </ol>
+      </div>
+      <div class="card">
+        <div class="card__head"><div class="card__title"><i data-icon="calendar-check"></i>页面地图</div></div>
+        <div class="card__body" style="font-size:13px">
+          <table class="table" style="min-width:0">
+            <thead><tr><th>页面</th><th>端口</th><th>核心内容</th></tr></thead>
+            <tbody>
+              <tr><td><a href="mobile/m-index.html" style="color:var(--primary)">打卡首页</a></td><td>移动</td><td>实时时钟 · 上下班打卡 · 今日时间线</td></tr>
+              <tr><td><a href="mobile/m-records.html" style="color:var(--primary)">考勤记录</a></td><td>移动</td><td>月历视图 · 状态图例 · 每日明细</td></tr>
+              <tr><td><a href="mobile/m-apply.html" style="color:var(--primary)">申请</a></td><td>移动</td><td>补卡/请假表单 · <b>必填标注</b> · 字段说明表</td></tr>
+              <tr><td><a href="mobile/m-stats.html" style="color:var(--primary)">我的</a></td><td>移动</td><td>月度统计 · 剩余补卡次数 · 我的审批</td></tr>
+              <tr><td><a href="pc/p-dashboard.html" style="color:var(--primary)">仪表盘</a></td><td>PC</td><td>出勤率 KPI · 异常名单 · 周趋势</td></tr>
+              <tr><td><a href="pc/p-records.html" style="color:var(--primary)">考勤记录</a></td><td>PC</td><td>筛选查询 · 详情弹窗 · 导出</td></tr>
+              <tr><td><a href="pc/p-approval.html" style="color:var(--primary)">审批中心</a></td><td>PC</td><td>待审/已审 · 驳回意见<b>必填</b></td></tr>
+              <tr><td><a href="pc/p-rules.html" style="color:var(--primary)">考勤规则</a></td><td>PC</td><td>规则表单 · <b>必填标注</b> · 判定规则说明</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 两端表单字段速查 ===== -->
+  <div class="reveal d4">
+    <h2 class="ov-section-title"><i data-icon="file-text"></i>两处核心表单字段速查<small>· 详细校验规则见各页面底部「字段说明表」</small></h2>
+    <div class="field-doc">
+      <div class="field-doc__title"><i data-icon="smartphone"></i>移动端 · 补卡申请字段</div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:130px">字段</th><th style="width:90px">必填性</th><th>格式 / 校验</th></tr></thead>
+        <tbody>
+          <tr><td>补卡日期</td><td><span class="badge badge--req">必填</span></td><td>仅可选今日之前 30 天内的工作日</td></tr>
+          <tr><td>补卡时段</td><td><span class="badge badge--req">必填</span></td><td>上班 / 下班（单选）</td></tr>
+          <tr><td>补卡时间</td><td><span class="badge badge--req">必填</span></td><td>上班卡须在 06:30–10:00，下班卡须在 15:30–23:59</td></tr>
+          <tr><td>事由类型</td><td><span class="badge badge--req">必填</span></td><td>忘打卡 / 交通延误 / 设备故障 / 临时外出 / 其他</td></tr>
+          <tr><td>详细说明</td><td><span class="badge badge--req">必填</span></td><td>10–200 字</td></tr>
+          <tr><td>证明附件</td><td><span class="badge badge--opt">选填</span></td><td>最多 3 张，jpg/png，单张 ≤ 10MB</td></tr>
+          <tr><td>抄送人</td><td><span class="badge badge--opt">选填</span></td><td>最多 5 人</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="field-doc__note">提交后进入「直属上级 → HR」二级审批；每人每月补卡上限 3 次（当前用户 9 月已用 1 次）。</div>
+    </div>
+    <div class="field-doc" style="margin-top:16px">
+      <div class="field-doc__title"><i data-icon="monitor"></i>PC 端 · 考勤规则配置字段（摘要）</div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th style="width:150px">字段</th><th style="width:90px">必填性</th><th>格式 / 校验</th></tr></thead>
+        <tbody>
+          <tr><td>规则名称</td><td><span class="badge badge--req">必填</span></td><td>2–20 字，企业内唯一</td></tr>
+          <tr><td>适用部门</td><td><span class="badge badge--req">必填</span></td><td>至少 1 个部门，可多选</td></tr>
+          <tr><td>工作日 / 上下班时间</td><td><span class="badge badge--req">必填</span></td><td>至少 1 个工作日；上班须早于下班</td></tr>
+          <tr><td>迟到宽限</td><td><span class="badge badge--req">必填</span></td><td>0–30 分钟，默认 10 分钟</td></tr>
+          <tr><td>打卡方式</td><td><span class="badge badge--req">必填</span></td><td>GPS / WiFi / 两者均可</td></tr>
+          <tr><td>GPS 打卡范围</td><td><span class="badge badge--cond">条件必填</span></td><td>打卡方式含 GPS 时必填，100–3000 米</td></tr>
+          <tr><td>WiFi 白名单</td><td><span class="badge badge--cond">条件必填</span></td><td>打卡方式含 WiFi 时至少 1 个 SSID</td></tr>
+          <tr><td>弹性工作 / 补卡上限 / 节假日免打</td><td><span class="badge badge--opt">选填</span></td><td>弹性 0–120 分钟；补卡 0–10 次/月；节假日默认开启</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="field-doc__note">完整字段、默认值与联动逻辑见 PC 端「考勤规则」页底部的字段说明表。</div>
+    </div>
+  </div>
+
+</div>
+<script src="assets/icons.js"></script>
+<script src="assets/mock.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

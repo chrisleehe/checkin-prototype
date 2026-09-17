@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>考勤记录 · 签到打卡系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* ---------- 页面级布局微调（颜色一律 var(--xxx)） ---------- */
+  .m-block { margin-bottom: 14px; }
+  .cal-card .card__body { padding: 14px 14px 16px; }
+  /* 今日主点 / 休息灰点（styles.css 无对应修饰类，补最小定义） */
+  .st-dot--today { background: var(--primary); }
+  .st-dot--rest { background: var(--text-faint); }
+  .st--today { background: var(--primary-soft); color: var(--primary-hover); }
+  /* 月度汇总：4 列小格 */
+  .sum-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .sum-cell { text-align: center; padding: 10px 4px; border-radius: var(--radius-md); background: var(--neutral-soft); }
+  .sum-cell b { display: block; font-family: var(--font-mono); font-size: 21px; font-weight: 700; line-height: 1.3; }
+  .sum-cell span { font-size: 11px; color: var(--text-sub); }
+  .sum-cell--warn b { color: var(--warning); }
+  .sum-cell--danger b { color: var(--danger); }
+  /* 每日明细行 */
+  .rec-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .rec-row:last-child { border-bottom: none; padding-bottom: 2px; }
+  .rec-row__date { width: 54px; flex: none; }
+  .rec-row__date b { display: block; font-family: var(--font-mono); font-size: 14px; }
+  .rec-row__date span { font-size: 11px; color: var(--text-faint); }
+  .rec-row__times { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-sub); }
+  .rec-row__times em { font-style: normal; color: var(--text-faint); }
+  .rec-row__st { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+  .rec-row__note { font-size: 11px; color: var(--text-faint); }
+</style>
+</head>
+<body data-page="records">
+<div class="m-stage"><div class="m-frame"><div class="m-app">
+  <header class="m-header">
+    <div class="m-header__row"><span class="m-header__date" id="mDate"></span>
+      <div class="avatar avatar--sm">陈</div></div>
+    <h1 class="m-header__title">考勤记录</h1>
+  </header>
+  <main class="m-content">
+
+    <!-- 月历卡 -->
+    <div class="card cal-card m-block reveal d1">
+      <div class="card__head"><div class="card__title"><i data-icon="calendar"></i>2026 年 9 月</div></div>
+      <div class="card__body">
+        <div class="cal-head">
+          <span class="cal-nav" id="calPrev"><i data-icon="chevron-left"></i></span>
+          <span class="cal-title">2026-09</span>
+          <span class="cal-nav" id="calNext"><i data-icon="chevron-right"></i></span>
+        </div>
+        <div class="cal-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    </div>
+
+    <!-- 图例 -->
+    <div class="legend m-block reveal d2">
+      <span class="legend__item"><span class="st-dot st-dot--normal"></span>正常</span>
+      <span class="legend__item"><span class="st-dot st-dot--late"></span>迟到</span>
+      <span class="legend__item"><span class="st-dot st-dot--missed"></span>缺卡</span>
+      <span class="legend__item"><span class="st-dot st-dot--field"></span>外勤</span>
+      <span class="legend__item"><span class="st-dot st-dot--makeup"></span>补卡</span>
+      <span class="legend__item"><span class="st-dot st-dot--rest"></span>休息</span>
+    </div>
+
+    <!-- 月度汇总 -->
+    <div class="card m-block reveal d3">
+      <div class="card__head"><div class="card__title"><i data-icon="bar-chart-3"></i>本月汇总</div>
+        <span class="faint">统计至 2026-09-17</span></div>
+      <div class="card__body">
+        <div class="sum-grid">
+          <div class="sum-cell"><b id="sumDue">-</b><span>应出勤（天）</span></div>
+          <div class="sum-cell"><b id="sumReal">-</b><span>实出勤（天）</span></div>
+          <div class="sum-cell sum-cell--warn"><b id="sumLate">-</b><span>迟到（次）</span></div>
+          <div class="sum-cell sum-cell--danger"><b id="sumMiss">-</b><span>缺卡（次）</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 每日明细 -->
+    <div class="card m-block reveal d4">
+      <div class="card__head"><div class="card__title"><i data-icon="clipboard-check"></i>每日明细</div>
+        <span class="faint" id="recCount"></span></div>
+      <div class="card__body" id="recList"></div>
+    </div>
+
+  </main>
+  <nav class="m-tabbar">
+    <a class="m-tab" data-nav="index" href="m-index.html"><i data-icon="clock"></i><span>打卡</span></a>
+    <a class="m-tab" data-nav="records" href="m-records.html"><i data-icon="calendar"></i><span>记录</span></a>
+    <a class="m-tab" data-nav="apply" href="m-apply.html"><i data-icon="file-text"></i><span>申请</span></a>
+    <a class="m-tab" data-nav="stats" href="m-stats.html"><i data-icon="user"></i><span>我的</span></a>
+  </nav>
+</div></div></div>
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+/* ============================================================
+   m-records 页面逻辑：2026-09 月历渲染 + 汇总 + 每日明细
+   ============================================================ */
+(function () {
+  var YEAR = 2026, MONTH = 9;                 // 演示数据月份
+  var daysInMonth = 30;                        // 2026-09 共 30 天
+  var todayDay = Number(DB.today.slice(-2));   // 17
+
+  /* 记录映射：date -> record */
+  var recMap = {};
+  DB.records.forEach(function (r) { recMap[r.date] = r; });
+
+  /* ---------- 月历 ---------- */
+  var grid = document.getElementById("calGrid");
+  var firstWeekday = new Date(YEAR, MONTH - 1, 1).getDay(); // 周二 = 2，前置 2 空位
+
+  function cellHTML(day) {
+    var date = YEAR + "-" + String(MONTH).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    var rec = recMap[date];
+    var weekday = new Date(YEAR, MONTH - 1, day).getDay();
+    var isRest = weekday === 0 || weekday === 6;
+    var isToday = day === todayDay;
+    var isFuture = day > todayDay;
+    var cls = "cal-cell";
+    var dot = "";
+
+    if (rec) {
+      var st = rec.status === "today" ? "today" : rec.status; // 今日进行中 → 主点
+      dot = '<span class="st-dot st-dot--' + st + '"></span>';
+      if (!isFuture) cls += " is-click";
+    } else if (isRest) {
+      dot = '<span class="st-dot st-dot--rest"></span>';       // 未来周末：休息灰点
+    }
+    if (isRest) cls += " is-rest";
+    if (isToday) cls += " is-today";
+    if (isFuture) cls += " is-future";
+
+    return '<div class="' + cls + '" data-date="' + date + '"><span class="d">' + day + "</span>" + dot + "</div>";
+  }
+
+  var html = "";
+  for (var i = 0; i < firstWeekday; i++) html += "<span></span>";
+  for (var d = 1; d <= daysInMonth; d++) html += cellHTML(d);
+  grid.innerHTML = html;
+
+  /* 点击日历格：toast 该日摘要（休息/未来给出对应提示） */
+  grid.addEventListener("click", function (e) {
+    var cell = e.target.closest(".cal-cell"); if (!cell) return;
+    var rec = recMap[cell.dataset.date];
+    var day = cell.dataset.date.slice(5);
+    if (!rec) { App.toast(day + " · 休息日（无考勤记录）", "info"); return; }
+    if (rec.status === "rest") { App.toast(day + " · 周末休息", "info"); return; }
+    var txt = day + " " + rec.week + " · " + DB.STATUS[rec.status] +
+      (rec.on ? " · 上班 " + rec.on.time : "") +
+      (rec.off ? " · 下班 " + rec.off.time : " · 下班 --:--");
+    App.toast(txt, "info");
+  });
+
+  /* 前后翻月：演示数据仅覆盖 2026-09 */
+  ["calPrev", "calNext"].forEach(function (id) {
+    document.getElementById(id).addEventListener("click", function () {
+      App.toast("演示数据仅覆盖 2026-09", "info");
+    });
+  });
+
+  /* ---------- 月度汇总（应出勤 = 非 rest 记录数；其余取 DB.myStats） ---------- */
+  var due = DB.records.filter(function (r) { return r.status !== "rest"; }).length;
+  document.getElementById("sumDue").textContent = due;
+  document.getElementById("sumReal").textContent = DB.myStats.attendDays;
+  document.getElementById("sumLate").textContent = DB.myStats.lateTimes;
+  document.getElementById("sumMiss").textContent = DB.myStats.missedTimes;
+
+  /* ---------- 每日明细：status≠rest 且 date≤今日，倒序（最新在上） ---------- */
+  function timeCell(p, isOn) {
+    if (p) return "<span class='mono'>" + p.time + "</span> · " + (DB.METHOD[p.method] || p.method);
+    return isOn ? "<em>缺卡（无上班记录）</em>" : "<em>未打卡</em>";
+  }
+
+  var dayList = DB.records.filter(function (r) { return r.status !== "rest" && r.date <= DB.today; });
+  var rows = dayList
+    .slice().reverse()
+    .map(function (r) {
+      var isToday = r.status === "today";
+      return '<div class="rec-row">' +
+        '<div class="rec-row__date"><b>' + r.date.slice(5) + "</b><span>" + r.week + "</span></div>" +
+        '<div class="rec-row__times">' +
+          "<div>上 " + timeCell(r.on, true) + "</div>" +
+          "<div>下 " + (isToday && !r.off ? "<em>进行中 · 待下班打卡</em>" : timeCell(r.off, false)) + "</div>" +
+        "</div>" +
+        '<div class="rec-row__st">' + App.statusBadge(r.status) +
+          (r.note ? '<span class="rec-row__note">' + r.note + "</span>" : "") +
+        "</div></div>";
+    }).join("");
+
+  document.getElementById("recList").innerHTML = rows;
+  document.getElementById("recCount").textContent = "共 " + dayList.length + " 条";
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>考勤申请 · 签到打卡系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* ---------- 页面级布局微调（颜色一律 var(--xxx)） ---------- */
+  .m-block { margin-bottom: 14px; }
+  .upload-box [data-icon] { display: inline-flex; }
+  .upload-box .up-text { display: block; margin-top: 4px; }
+  /* 字段说明表横向滚动容器 */
+  .doc-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); }
+  .doc-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; margin: 2px 0 10px; color: var(--primary-hover); }
+  .doc-title [data-icon] { width: 16px; height: 16px; }
+</style>
+</head>
+<body data-page="apply">
+<div class="m-stage"><div class="m-frame"><div class="m-app">
+  <header class="m-header">
+    <div class="m-header__row"><span class="m-header__date" id="mDate"></span>
+      <div class="avatar avatar--sm">陈</div></div>
+    <h1 class="m-header__title">考勤申请</h1>
+  </header>
+  <main class="m-content">
+
+    <div id="applyBox" class="reveal d1">
+
+      <!-- Tabs：补卡申请 | 请假申请 -->
+      <div class="tabs" data-tabs>
+        <div class="tab active" data-tab="makeup"><i data-icon="clipboard-check"></i>补卡申请</div>
+        <div class="tab" data-tab="leave"><i data-icon="send"></i>请假申请</div>
+      </div>
+
+      <!-- ================ 面板一：补卡申请 ================ -->
+      <div class="tab-panel active" data-panel="makeup" id="panelMakeup">
+
+        <!-- 本月剩余次数 -->
+        <div class="info-strip" style="margin-bottom:16px"><i data-icon="alert-triangle"></i>
+          <span>本月补卡：已用 <b class="mono" id="mkUsed">-</b>/<span class="mono" id="mkLimit">-</span> 次，剩余 <b class="mono" id="mkLeft">-</b> 次</span>
+        </div>
+
+        <form id="formMakeup" novalidate>
+          <!-- 补卡日期 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>补卡日期<span class="badge badge--req">必填</span></div>
+            <input class="input" type="date" id="mkDate">
+            <div class="field__hint">仅支持今日之前 30 天内的工作日</div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择补卡日期</div>
+          </div>
+
+          <!-- 补卡时段 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>补卡时段<span class="badge badge--req">必填</span></div>
+            <div class="seg" id="mkPeriod">
+              <span class="seg__item" data-value="on"><span class="seg__dot"></span>上班卡</span>
+              <span class="seg__item" data-value="off"><span class="seg__dot"></span>下班卡</span>
+            </div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择补卡时段</div>
+          </div>
+
+          <!-- 补卡时间 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>补卡时间<span class="badge badge--req">必填</span></div>
+            <input class="input" type="time" id="mkTime">
+            <div class="field__hint">窗口校验：上班卡 <span class="mono">06:30-10:00</span> · 下班卡 <span class="mono">15:30-23:59</span></div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择补卡时间</div>
+          </div>
+
+          <!-- 事由类型 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>事由类型<span class="badge badge--req">必填</span></div>
+            <select class="select" id="mkReasonType">
+              <option value="">请选择事由类型（5 选 1）</option>
+              <option>忘打卡</option>
+              <option>交通延误</option>
+              <option>设备故障</option>
+              <option>临时外出</option>
+              <option>其他</option>
+            </select>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择事由类型</div>
+          </div>
+
+          <!-- 详细说明 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>详细说明<span class="badge badge--req">必填</span></div>
+            <textarea class="textarea" id="mkReason" maxlength="200"
+              placeholder="今晨到岗后直接参加评审会议，忘记打卡，会议室门禁有进入记录。"></textarea>
+            <div class="field__hint">10-200 字 · 当前 <span class="mono" id="mkCount">0</span> 字</div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请填写详细说明</div>
+          </div>
+
+          <!-- 证明附件 -->
+          <div class="field">
+            <div class="field__label">证明附件<span class="badge badge--opt">选填</span></div>
+            <div class="upload-box" id="mkUpload">
+              <i data-icon="paperclip"></i>
+              <span class="up-text">添加照片/凭证 · 最多 3 张</span>
+            </div>
+            <div class="field__hint">支持 jpg / png / pdf · 单张 ≤10MB</div>
+          </div>
+
+          <!-- 抄送人 -->
+          <div class="field">
+            <div class="field__label">抄送人<span class="badge badge--opt">选填</span></div>
+            <input class="input" type="text" id="mkCc" placeholder="如：张明、王莉（顿号分隔）">
+            <div class="field__hint">最多 5 人</div>
+          </div>
+
+          <button class="btn btn--primary btn--block btn--lg" type="submit" id="mkSubmit">提交补卡申请</button>
+        </form>
+      </div>
+
+      <!-- ================ 面板二：请假申请 ================ -->
+      <div class="tab-panel" data-panel="leave" id="panelLeave">
+        <form id="formLeave" novalidate>
+          <!-- 请假类型 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>请假类型<span class="badge badge--req">必填</span></div>
+            <select class="select" id="lvType">
+              <option value="">请选择请假类型</option>
+              <option>年假</option>
+              <option>事假</option>
+              <option>病假</option>
+              <option>调休</option>
+            </select>
+            <div class="field__hint">年假余额 <b class="mono" id="lvBalance">-</b> 天 · 以审批结果为准</div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择请假类型</div>
+          </div>
+
+          <!-- 开始 / 结束时间 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>开始时间<span class="badge badge--req">必填</span></div>
+            <input class="input" type="datetime-local" id="lvStart">
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择开始时间</div>
+          </div>
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>结束时间<span class="badge badge--req">必填</span></div>
+            <input class="input" type="datetime-local" id="lvEnd">
+            <div class="field__hint">结束时间须晚于开始时间</div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请选择结束时间</div>
+          </div>
+
+          <!-- 事由说明 -->
+          <div class="field" data-required>
+            <div class="field__label"><span class="req-star">*</span>事由说明<span class="badge badge--req">必填</span></div>
+            <textarea class="textarea" id="lvReason" maxlength="200"
+              placeholder="请说明请假事由与工作交接安排…"></textarea>
+            <div class="field__hint">10-200 字 · 当前 <span class="mono" id="lvCount">0</span> 字</div>
+            <div class="field__error-msg"><i data-icon="alert-triangle" class="icon--sm"></i>请填写事由说明</div>
+          </div>
+
+          <!-- 附件 -->
+          <div class="field">
+            <div class="field__label">证明附件<span class="badge badge--opt">选填</span></div>
+            <div class="upload-box" id="lvUpload">
+              <i data-icon="paperclip"></i>
+              <span class="up-text">添加照片/凭证 · 最多 3 张</span>
+            </div>
+            <div class="field__hint">病假建议附诊断证明</div>
+          </div>
+
+          <button class="btn btn--primary btn--block btn--lg" type="submit" id="lvSubmit">提交请假申请</button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- ================ 字段说明表（必填性标注核心组件） ================ -->
+    <div class="m-block reveal d2">
+      <div class="doc-title"><i data-icon="clipboard-check"></i>补卡申请 · 字段说明</div>
+      <div class="doc-scroll">
+        <div class="field-doc">
+          <table>
+            <thead>
+              <tr><th>字段</th><th>必填性</th><th>格式与校验</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>补卡日期</td><td><span class="badge badge--req">必填</span></td><td>今日之前 30 天内的工作日</td></tr>
+              <tr><td>补卡时段</td><td><span class="badge badge--req">必填</span></td><td>上班 或 下班（单选胶囊）</td></tr>
+              <tr><td>补卡时间</td><td><span class="badge badge--req">必填</span></td><td>窗口校验：上班卡 <span class="mono">06:30-10:00</span> · 下班卡 <span class="mono">15:30-23:59</span></td></tr>
+              <tr><td>事由类型</td><td><span class="badge badge--req">必填</span></td><td>5 选 1：忘打卡 / 交通延误 / 设备故障 / 临时外出 / 其他</td></tr>
+              <tr><td>详细说明</td><td><span class="badge badge--req">必填</span></td><td>10-200 字，输入框下方实时字数提示</td></tr>
+              <tr><td>证明附件</td><td><span class="badge badge--opt">选填</span></td><td>≤3 张 · 单张 ≤10MB（jpg / png / pdf）</td></tr>
+              <tr><td>抄送人</td><td><span class="badge badge--opt">选填</span></td><td>≤5 人</td></tr>
+            </tbody>
+          </table>
+          <div class="field-doc__note">提交后进入「直属上级 → HR」二级审批；每月上限 3 次，须在次日 <span class="mono">18:00</span> 前提交。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 规则说明 -->
+    <div class="rule-note reveal d3">
+      <h4><i data-icon="shield-check"></i>申请规则</h4>
+      <ol>
+        <li><b>外勤打卡</b>：需现场照片 + 事由，并经审批通过后生效。</li>
+        <li><b>补卡审批</b>：通过后当日考勤状态自动更新。</li>
+        <li><b>驳回处理</b>：可查看驳回意见，补充材料后重新提交。</li>
+      </ol>
+    </div>
+
+  </main>
+  <nav class="m-tabbar">
+    <a class="m-tab" data-nav="index" href="m-index.html"><i data-icon="clock"></i><span>打卡</span></a>
+    <a class="m-tab" data-nav="records" href="m-records.html"><i data-icon="calendar"></i><span>记录</span></a>
+    <a class="m-tab" data-nav="apply" href="m-apply.html"><i data-icon="file-text"></i><span>申请</span></a>
+    <a class="m-tab" data-nav="stats" href="m-stats.html"><i data-icon="user"></i><span>我的</span></a>
+  </nav>
+</div></div></div>
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+/* ============================================================
+   m-apply 页面逻辑：补卡 / 请假 表单校验与提交
+   ============================================================ */
+(function () {
+  /* ---------- 数据回填 ---------- */
+  document.getElementById("mkDate").max = DB.today;                 // 补卡日期不得晚于今日
+  document.getElementById("mkUsed").textContent = DB.myStats.makeupUsed;
+  document.getElementById("mkLimit").textContent = DB.myStats.makeupLimit;
+  document.getElementById("mkLeft").textContent = DB.myStats.makeupLimit - DB.myStats.makeupUsed;
+  document.getElementById("lvBalance").textContent = DB.currentUser.annualLeaveLeft;
+
+  /* ---------- 字数统计（10-200 字实时提示） ---------- */
+  function bindCount(areaId, countId) {
+    var area = document.getElementById(areaId);
+    var count = document.getElementById(countId);
+    area.addEventListener("input", function () { count.textContent = area.value.length; });
+  }
+  bindCount("mkReason", "mkCount");
+  bindCount("lvReason", "lvCount");
+
+  /* ---------- 附件上传（演示桩） ---------- */
+  ["mkUpload", "lvUpload"].forEach(function (id) {
+    document.getElementById(id).addEventListener("click", function () {
+      App.toast("演示环境不支持真实上传", "info");
+    });
+  });
+
+  /* ---------- 取值工具 ---------- */
+  function $(id) { return document.getElementById(id); }
+  function segValue(id) {
+    var on = $(id).querySelector(".seg__item.on");
+    return on ? on.dataset.value : "";
+  }
+  function markError(id, bad) {
+    $(id).closest(".field").classList.toggle("field--error", bad);
+    return !bad;
+  }
+
+  /* ---------- 提交按钮 loading ---------- */
+  function setLoading(btn, loading, text) {
+    btn.disabled = loading;
+    btn.classList.toggle("btn--disabled", loading);
+    if (loading) { btn.dataset.text = btn.textContent; btn.textContent = text; }
+    else if (btn.dataset.text) { btn.textContent = btn.dataset.text; }
+  }
+
+  /* ---------- 表单重置 ---------- */
+  function resetForm(panel) {
+    panel.querySelectorAll("input, select, textarea").forEach(function (el) { el.value = ""; });
+    panel.querySelectorAll(".seg__item.on").forEach(function (el) { el.classList.remove("on"); });
+    panel.querySelectorAll(".field--error").forEach(function (el) { el.classList.remove("field--error"); });
+    ["mkCount", "lvCount"].forEach(function (id) { var c = $(id); if (c && panel.contains(c)) c.textContent = "0"; });
+  }
+
+  /* ---------- 补卡提交 ---------- */
+  $("formMakeup").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var panel = $("panelMakeup");
+    if (!App.validate(panel)) { App.toast("请完善必填项（标红字段）", "error"); return; }
+
+    var reason = $("mkReason").value.trim();
+    if (reason.length < 10) {
+      markError("mkReason", true);
+      App.toast("详细说明至少10个字", "error");
+      return;
+    }
+    var btn = $("mkSubmit");
+    setLoading(btn, true, "提交中…");
+    API.submitMakeup({
+      date: $("mkDate").value, period: segValue("mkPeriod"), time: $("mkTime").value,
+      reasonType: $("mkReasonType").value, reason: reason,
+      cc: $("mkCc").value.trim() || undefined
+    }).then(function (res) {
+      setLoading(btn, false);
+      if (res.code === 0) {
+        App.toast("补卡申请已提交 · 等待直属上级审批", "success");
+        resetForm(panel);
+      } else {
+        App.toast(res.msg, "error");
+      }
+    });
+  });
+
+  /* ---------- 请假提交 ---------- */
+  $("formLeave").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var panel = $("panelLeave");
+    if (!App.validate(panel)) { App.toast("请完善必填项（标红字段）", "error"); return; }
+
+    var reason = $("lvReason").value.trim();
+    if (reason.length < 10) {
+      markError("lvReason", true);
+      App.toast("详细说明至少10个字", "error");
+      return;
+    }
+    if ($("lvStart").value && $("lvEnd").value && $("lvEnd").value <= $("lvStart").value) {
+      markError("lvEnd", true);
+      App.toast("结束时间须晚于开始时间", "error");
+      return;
+    }
+    var btn = $("lvSubmit");
+    setLoading(btn, true, "提交中…");
+    API.submitLeave({
+      type: $("lvType").value, start: $("lvStart").value, end: $("lvEnd").value, reason: reason
+    }).then(function (res) {
+      setLoading(btn, false);
+      if (res.code === 0) {
+        App.toast("请假申请已提交 · 等待直属上级审批", "success");
+        resetForm(panel);
+      } else {
+        App.toast(res.msg, "error");
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>我的 · 签到打卡系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* ---------- 页面级布局微调（颜色一律 var(--xxx)） ---------- */
+  .m-block { margin-bottom: 14px; }
+  /* 个人信息卡 */
+  .profile { display: flex; align-items: center; gap: 14px; }
+  .profile__info { flex: 1; min-width: 0; }
+  .profile__name { font-size: 16.5px; font-weight: 700; }
+  .profile__name small { font-size: 12.5px; font-weight: 400; color: var(--text-sub); }
+  .profile__line { font-size: 12px; color: var(--text-faint); }
+  .mk-left { flex: none; text-align: center; background: var(--primary-soft); color: var(--primary-hover);
+    border-radius: var(--radius-md); padding: 8px 12px; }
+  .mk-left b { display: block; font-family: var(--font-mono); font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .mk-left span { font-size: 10.5px; }
+  /* KPI：2 列小格 */
+  .kpi-grid-m { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi-grid-m .kpi { padding: 12px 14px; }
+  .kpi-grid-m .kpi__num { font-size: 21px; margin-top: 4px; }
+  /* 出勤构成横向条 */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12.5px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-row__label { width: 42px; flex: none; color: var(--text-sub); }
+  .bar-row__track { flex: 1; height: 8px; border-radius: 999px; background: var(--neutral-soft); overflow: hidden; }
+  .bar-row__fill { display: block; height: 100%; border-radius: 999px; min-width: 6px; }
+  .bar-row__num { width: 30px; flex: none; text-align: right; font-weight: 700; }
+  /* 我的审批 */
+  .apv-item { padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .apv-item:last-child { border-bottom: none; padding-bottom: 2px; }
+  .apv-item__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .apv-item__row .sub { flex: 1; min-width: 0; font-size: 12.5px; }
+  .apv-item__row--foot { justify-content: space-between; margin-top: 5px; }
+  .apv-item__time { font-size: 11.5px; color: var(--text-faint); }
+  .apv-reject { margin-top: 5px; font-size: 11.5px; color: var(--danger); background: var(--danger-soft);
+    border-radius: var(--radius-sm); padding: 5px 8px; }
+</style>
+</head>
+<body data-page="stats">
+<div class="m-stage"><div class="m-frame"><div class="m-app">
+  <header class="m-header">
+    <div class="m-header__row"><span class="m-header__date" id="mDate"></span>
+      <div class="avatar avatar--sm">陈</div></div>
+    <h1 class="m-header__title">我的</h1>
+  </header>
+  <main class="m-content">
+
+    <!-- 个人信息卡 -->
+    <div class="card m-block reveal d1">
+      <div class="card__body profile">
+        <div class="avatar avatar--lg">陈</div>
+        <div class="profile__info">
+          <div class="profile__name">陈晓雯 <small>· 产品经理</small></div>
+          <div class="profile__line">产品设计部 · 工号 <span class="mono" id="pfEmpId">-</span></div>
+          <div class="profile__line">直属上级：<span id="pfSuperior">-</span></div>
+        </div>
+        <div class="mk-left"><b class="mono" id="mkLeft">-/-</b><span>剩余补卡（次）</span></div>
+      </div>
+    </div>
+
+    <!-- 本月统计 KPI：2x3 -->
+    <div class="m-block reveal d2">
+      <div class="kpi-grid-m" id="kpiGrid"></div>
+    </div>
+
+    <!-- 出勤构成 -->
+    <div class="card m-block reveal d3">
+      <div class="card__head"><div class="card__title"><i data-icon="bar-chart-3"></i>出勤构成</div>
+        <span class="faint">本月 · 按天</span></div>
+      <div class="card__body">
+        <div class="bar-row">
+          <span class="bar-row__label">正常</span>
+          <span class="bar-row__track"><span class="bar-row__fill" style="width:79%;background:var(--success)"></span></span>
+          <span class="bar-row__num mono">11</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row__label">迟到</span>
+          <span class="bar-row__track"><span class="bar-row__fill" style="width:12%;background:var(--warning)"></span></span>
+          <span class="bar-row__num mono">1</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row__label">缺卡</span>
+          <span class="bar-row__track"><span class="bar-row__fill" style="width:12%;background:var(--danger)"></span></span>
+          <span class="bar-row__num mono">1</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-row__label">外勤</span>
+          <span class="bar-row__track"><span class="bar-row__fill" style="width:12%;background:var(--info)"></span></span>
+          <span class="bar-row__num mono">1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 我的审批 -->
+    <div class="card m-block reveal d4">
+      <div class="card__head"><div class="card__title"><i data-icon="send"></i>我的审批</div>
+        <span class="faint" id="apvCount"></span></div>
+      <div class="card__body" id="apvList"></div>
+    </div>
+
+    <!-- 数据口径说明 -->
+    <div class="info-strip reveal d5"><i data-icon="alert-triangle"></i>
+      <span>数据说明 · 统计口径为自然月，每日 <span class="mono">10:00</span> 锁定前一日记录</span>
+    </div>
+
+  </main>
+  <nav class="m-tabbar">
+    <a class="m-tab" data-nav="index" href="m-index.html"><i data-icon="clock"></i><span>打卡</span></a>
+    <a class="m-tab" data-nav="records" href="m-records.html"><i data-icon="calendar"></i><span>记录</span></a>
+    <a class="m-tab" data-nav="apply" href="m-apply.html"><i data-icon="file-text"></i><span>申请</span></a>
+    <a class="m-tab" data-nav="stats" href="m-stats.html"><i data-icon="user"></i><span>我的</span></a>
+  </nav>
+</div></div></div>
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+/* ============================================================
+   m-stats 页面逻辑：个人信息回填 + KPI 渲染 + 我的审批列表
+   ============================================================ */
+(function () {
+  var u = DB.currentUser, s = DB.myStats;
+
+  /* ---------- 个人信息 ---------- */
+  document.getElementById("pfEmpId").textContent = u.id;
+  document.getElementById("pfSuperior").textContent = u.superior;
+  document.getElementById("mkLeft").textContent = (s.makeupLimit - s.makeupUsed) + "/" + s.makeupLimit;
+
+  /* ---------- 本月统计 KPI（2x3 小格，数据取 DB.myStats） ---------- */
+  var kpis = [
+    { label: "实出勤", icon: "calendar-check", num: s.attendDays, unit: "天" },
+    { label: "迟到", icon: "clock", num: s.lateTimes, unit: "次", cls: "kpi--warn" },
+    { label: "缺卡", icon: "alert-triangle", num: s.missedTimes, unit: "次", cls: "kpi--danger" },
+    { label: "外勤", icon: "navigation", num: s.fieldDays, unit: "天", cls: "kpi--info" },
+    { label: "平均工时", icon: "timer", num: s.avgHours.replace("h", ""), unit: "h" },
+    { label: "加班累计", icon: "moon", num: s.overtime.replace("h", ""), unit: "h" }
+  ];
+  document.getElementById("kpiGrid").innerHTML = kpis.map(function (k) {
+    return '<div class="kpi ' + (k.cls || "") + '">' +
+      '<div class="kpi__label"><i data-icon="' + k.icon + '"></i>' + k.label + "</div>" +
+      '<div class="kpi__num">' + k.num + "<small>" + k.unit + "</small></div>" +
+      "</div>";
+  }).join("");
+
+  /* ---------- 我的审批列表（DB.myApprovals） ---------- */
+  var typeCls = { "补卡": "makeup", "外勤": "field", "请假": "leave" };
+  var list = DB.myApprovals;
+  document.getElementById("apvCount").textContent = "共 " + list.length + " 条";
+  document.getElementById("apvList").innerHTML = list.map(function (a) {
+    return '<div class="apv-item">' +
+      '<div class="apv-item__row">' + App.statusBadge(typeCls[a.type] || a.type) +
+        '<span class="sub">' + a.target + "</span></div>" +
+      '<div class="apv-item__row apv-item__row--foot">' +
+        App.statusBadge(a.status) + '<span class="apv-item__time mono">' + a.time + "</span></div>" +
+      (a.status === "rejected" && a.note ? '<div class="apv-reject">驳回原因：' + a.note + "</div>" : "") +
+      "</div>";
+  }).join("");
+
+  App.renderIcons(); // 渲染 KPI 内动态图标
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>审批中心 · 考勤签到系统</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  /* —— 页面级布局微调（颜色一律使用 styles.css 设计变量）—— */
+  .pc-page-title__actions { margin-left: auto; align-self: center; display: flex; align-items: center; gap: 10px; }
+  .ap-list { display: flex; flex-direction: column; gap: 16px; }
+  .ap-card { display: grid; grid-template-columns: 150px minmax(0, 1fr) 300px; gap: 20px; padding: 18px 20px; }
+  .ap-card__who { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px; padding: 4px 16px 0 0; border-right: 1px solid var(--border); }
+  .ap-card__main { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+  .ap-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ap-row { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+  .ap-k { flex: none; width: 58px; color: var(--text-faint); font-size: 12px; }
+  .ap-attach { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ap-card__side { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-left: 1px solid var(--border); padding-left: 18px; }
+  .ap-act { display: flex; flex-direction: column; gap: 8px; }
+  .done-card { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .done-card__row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .done-who { display: flex; align-items: center; gap: 10px; min-width: 168px; }
+  .done-mid { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .flow-step--rejected .flow-step__dot { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+  .field-doc-scroll { overflow-x: auto; }
+  @media (max-width: 1100px) {
+    .ap-card { grid-template-columns: 1fr; }
+    .ap-card__who, .ap-card__side { border: none; padding: 0; flex-direction: row; align-items: center; flex-wrap: wrap; text-align: left; }
+  }
+</style>
+</head>
+<body data-page="approval">
+<div class="pc-app">
+  <aside class="pc-nav">
+    <div class="pc-nav__logo"><span class="pc-nav__logo-mark" data-icon="timer"></span>
+      <div><b>考勤签到系统</b><i>Attendance Console</i></div></div>
+    <div class="pc-nav__group-label">考勤管理</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="dashboard" href="p-dashboard.html"><i data-icon="layout-dashboard"></i>仪表盘</a>
+      <a class="pc-nav__link" data-nav="records" href="p-records.html"><i data-icon="calendar"></i>考勤记录</a>
+      <a class="pc-nav__link" data-nav="approval" href="p-approval.html"><i data-icon="clipboard-check"></i>审批中心</a>
+    </nav>
+    <div class="pc-nav__group-label">系统配置</div>
+    <nav class="pc-nav__menu">
+      <a class="pc-nav__link" data-nav="rules" href="p-rules.html"><i data-icon="settings"></i>考勤规则</a>
+    </nav>
+    <a class="pc-nav__footer" href="../index.html"><i data-icon="arrow-left"></i>返回总览入口</a>
+  </aside>
+  <div class="pc-main">
+    <header class="pc-topbar">
+      <div class="pc-crumb">系统配置 <i data-icon="chevron-right"></i> <b data-crumb>审批中心</b></div>
+      <div class="pc-topbar__right"><span class="pc-topbar__date" id="topDate"></span>
+        <div class="avatar avatar--sm">王</div><span>王莉 · 系统管理员</span></div>
+    </header>
+    <main class="pc-content">
+
+      <div class="pc-page-title reveal">
+        <h2>审批中心</h2><span>补卡 / 外勤 / 请假申请处理</span>
+        <div class="pc-page-title__actions">
+          <div class="info-strip info-strip--warn"><i data-icon="alert-triangle"></i>审批需在提交后 24 小时内完成</div>
+        </div>
+      </div>
+
+      <div class="ap-wrap reveal d1">
+        <div class="tabs" data-tabs>
+          <span class="tab active" data-tab="pending"><i data-icon="inbox"></i>待审批 <span class="count" id="pendingCount">0</span></span>
+          <span class="tab" data-tab="done"><i data-icon="check-circle-2"></i>已处理</span>
+        </div>
+
+        <!-- 待审批面板 -->
+        <div class="tab-panel active" data-panel="pending">
+          <div class="ap-list" id="panelPending"></div>
+        </div>
+
+        <!-- 已处理面板 -->
+        <div class="tab-panel" data-panel="done">
+          <div class="ap-list" id="panelDone"></div>
+        </div>
+      </div>
+
+      <!-- 字段说明表（最底部） -->
+      <section class="field-doc reveal d3" style="margin-top:20px">
+        <div class="field-doc__title"><i data-icon="clipboard-check"></i>字段说明 · 审批单（申请人填写项 + 审批人操作项）</div>
+        <div class="field-doc-scroll">
+          <table>
+            <thead>
+              <tr><th>字段</th><th>必填性</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>申请类型</td><td><span class="badge badge--req">必填</span> · 系统带入</td><td>补卡 / 外勤 / 请假三选一，由申请人提交时选择，审批端只读</td></tr>
+              <tr><td>申请单号</td><td><span class="badge badge--sys">系统生成</span></td><td>格式 AP-YYYYMMDD-NNN，全局唯一，审批端只读</td></tr>
+              <tr><td>申请人信息</td><td><span class="badge badge--sys">系统生成</span></td><td>姓名 / 部门 / 工号自动带出，不可修改</td></tr>
+              <tr><td>目标日期时段</td><td><span class="badge badge--req">必填</span> · 申请人填写</td><td>补卡精确到上/下班与时间点；外勤 / 请假精确到日或半天</td></tr>
+              <tr><td>事由类型</td><td><span class="badge badge--req">必填</span></td><td>补卡：交通延误 / 忘打卡等；外勤：客户拜访 / 设备调试等；请假：年假 / 事假等</td></tr>
+              <tr><td>详细说明</td><td><span class="badge badge--req">必填</span></td><td>10-200 字，需写明具体事由</td></tr>
+              <tr><td>证明附件</td><td><span class="badge badge--opt">选填</span></td><td>最多 3 个，单个 ≤10MB，支持 jpg / png / pdf</td></tr>
+              <tr><td>抄送人</td><td><span class="badge badge--opt">选填</span></td><td>最多 5 人，审批结果自动通知</td></tr>
+              <tr><td>审批意见-通过</td><td><span class="badge badge--opt">选填</span></td><td>默认「同意」，可直接提交</td></tr>
+              <tr><td>审批意见-驳回</td><td><span class="badge badge--req">必填</span></td><td>10-100 字，将随通知发送给申请人</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="field-doc__note">审批规则：直属上级 → HR 二级审批，任一节点驳回即终止流程；提交后 24 小时未处理自动升级提醒。</div>
+      </section>
+
+      <!-- 驳回弹窗 -->
+      <div class="modal-backdrop" id="modalReject">
+        <div class="modal">
+          <div class="modal__head">
+            <h3 id="rejectTitle">驳回申请</h3>
+            <span class="modal__close" data-close-modal><i data-icon="x"></i></span>
+          </div>
+          <div class="modal__body">
+            <div class="info-strip" id="rejectSummary" style="margin-bottom:14px"></div>
+            <div class="field" data-required>
+              <div class="field__label"><span class="req-star">*</span>驳回意见 <span class="badge badge--req">必填</span></div>
+              <textarea class="textarea" id="rejectText" maxlength="100" placeholder="请填写驳回原因与整改建议，如：材料不全，请补充现场照片后重新提交"></textarea>
+              <div class="field__hint">将随通知发送给申请人，10-100 字</div>
+              <div class="field__error-msg"><i data-icon="alert-triangle"></i>驳回意见为必填项</div>
+            </div>
+          </div>
+          <div class="modal__foot">
+            <button class="btn btn--ghost" data-close-modal type="button">取消</button>
+            <button class="btn btn--soft-danger" id="btnRejectOk" type="button"><i data-icon="x"></i>确认驳回</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<script src="../assets/icons.js"></script><script src="../assets/mock.js"></script>
+<script src="../assets/api.js"></script><script src="../assets/app.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = s => App.esc(s);
+
+  /* 数据源：DB.approvals 前 3 条 pending → 待审批；后 2 条 approved/rejected → 已处理 */
+  const pending = DB.approvals.filter(a => a.status === "pending");
+  const done = DB.approvals.filter(a => a.status !== "pending");
+  let pendingLeft = pending.length;
+  let rejecting = null, rejectingCard = null;
+
+  /* ---------- 审批流渲染 ---------- */
+  function flowHtml(flow) {
+    let out = "";
+    flow.forEach((n, i) => {
+      if (i) out += `<span class="flow-line ${flow[i - 1].state === "done" ? "flow-line--done" : ""}"></span>`;
+      const ic = n.state === "done" ? "check" : (n.state === "rejected" ? "x" : "");
+      out += `<div class="flow-step flow-step--${n.state}">
+        <span class="flow-step__dot">${ic ? `<i data-icon="${ic}"></i>` : ""}</span>
+        <b>${esc(n.node)}</b><span class="faint">${n.time ? "· " + n.time : ""}</span></div>`;
+    });
+    return `<div class="flow-steps">${out}</div>`;
+  }
+  function attachHtml(list) {
+    if (!list.length) return `<span class="faint">无附件</span>`;
+    return list.map(f => `<span class="attach-chip"><i data-icon="paperclip"></i>${esc(f)}</span>`).join("");
+  }
+  /* 补卡卡：本月补卡次数，接近上限 → 警示条 */
+  function makeupTip(a) {
+    if (a.type !== "makeup") return "";
+    return a.makeupUsed >= a.makeupLimit - 1
+      ? `<div class="info-strip info-strip--warn"><i data-icon="alert-triangle"></i>本月补卡 <b class="mono">${a.makeupUsed}/${a.makeupLimit}</b> 次 · 已接近本月上限，请核对补卡规则后审批</div>`
+      : `<div class="faint">本月补卡 <span class="mono">${a.makeupUsed}/${a.makeupLimit}</span> 次</div>`;
+  }
+
+  /* ---------- 待审批卡 ---------- */
+  function cardHtml(a) {
+    return `<article class="card ap-card reveal" data-id="${a.id}">
+      <div class="ap-card__who">
+        <div class="avatar avatar--lg">${a.applicant.charAt(0)}</div>
+        <b>${esc(a.applicant)}</b>
+        <span class="sub">${esc(a.dept)}</span>
+        <span class="faint mono">${a.empId}</span>
+      </div>
+      <div class="ap-card__main">
+        <div class="ap-meta">
+          <span class="st st--${a.type}">${a.typeName}</span>
+          <span class="mono sub">${a.id}</span>
+          <span class="js-status">${App.statusBadge("pending")}</span>
+        </div>
+        <div class="ap-row"><span class="ap-k">目标</span><b>${esc(a.target)}</b></div>
+        <div class="ap-row"><span class="ap-k">事由类型</span><span>${esc(a.reasonType)}</span></div>
+        <div class="ap-row"><span class="ap-k">详细说明</span><span class="sub">${esc(a.reason)}</span></div>
+        <div class="ap-row"><span class="ap-k">附件</span><span class="ap-attach">${attachHtml(a.attach)}</span></div>
+        <div class="faint">提交于 <span class="mono">${a.submitted}</span> · 抄送：${a.cc.length ? esc(a.cc.join("、")) : "无"}</div>
+        ${makeupTip(a)}
+      </div>
+      <div class="ap-card__side">
+        ${flowHtml(a.flow)}
+        <div class="ap-act">
+          <button class="btn btn--primary btn--sm js-approve" type="button"><i data-icon="check"></i>通过</button>
+          <button class="btn btn--soft-danger btn--sm js-reject" type="button"><i data-icon="x"></i>驳回</button>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  /* ---------- 已处理卡（简化）---------- */
+  function doneCardHtml(a) {
+    const strip = a.status === "rejected"
+      ? `<div class="info-strip info-strip--danger"><i data-icon="alert-triangle"></i>驳回原因：${esc(a.rejectReason)}</div>` : "";
+    return `<article class="card done-card reveal" data-id="${a.id}">
+      <div class="done-card__row">
+        <div class="done-who">
+          <div class="avatar">${a.applicant.charAt(0)}</div>
+          <div><b>${esc(a.applicant)}</b><div class="faint">${esc(a.dept)} · <span class="mono">${a.empId}</span></div></div>
+        </div>
+        <div class="done-mid">
+          <span class="st st--${a.type}">${a.typeName}</span>
+          <span class="mono sub">${a.id}</span>
+          <span class="sub">${esc(a.target)}</span>
+        </div>
+        ${App.statusBadge(a.status)}
+      </div>
+      <div class="done-card__flow">${flowHtml(a.flow)}</div>
+      ${strip}
+    </article>`;
+  }
+
+  /* ---------- 渲染与状态 ---------- */
+  function render() {
+    $("#panelPending").innerHTML = pending.map(cardHtml).join("");
+    $("#panelDone").innerHTML = done.map(doneCardHtml).join("");
+    App.renderIcons($("#panelPending"));
+    App.renderIcons($("#panelDone"));
+    renderCount();
+  }
+  function renderCount() { $("#pendingCount").textContent = pendingLeft; }
+  function lockCard(card) {
+    card.querySelectorAll(".js-approve,.js-reject").forEach(b => { b.disabled = true; b.classList.add("btn--disabled"); });
+  }
+  function maybeEmpty() {
+    if (pendingLeft === 0) {
+      $("#panelPending").innerHTML = `<div class="empty card"><i data-icon="inbox"></i><p>暂无待审批申请</p></div>`;
+      App.renderIcons($("#panelPending"));
+    }
+  }
+
+  /* ---------- 待审批操作（事件委托）---------- */
+  $("#panelPending").addEventListener("click", e => {
+    const card = e.target.closest(".ap-card"); if (!card) return;
+    const id = card.dataset.id;
+    if (e.target.closest(".js-approve")) {
+      (async () => {
+        lockCard(card); // 先置灰防重复提交
+        const res = await API.approve(id);
+        if (res.code === 0) {
+          App.toast("已通过 · 已通知申请人", "success");
+          card.querySelector(".js-status").innerHTML = App.statusBadge("approved");
+          pendingLeft--; renderCount(); maybeEmpty();
+        }
+      })();
+    } else if (e.target.closest(".js-reject")) {
+      openReject(id, card);
+    }
+  });
+
+  /* ---------- 驳回弹窗 ---------- */
+  function openReject(id, card) {
+    const a = DB.approvals.find(x => x.id === id); if (!a) return;
+    rejecting = a; rejectingCard = card;
+    $("#rejectTitle").textContent = `驳回申请 · ${id}`;
+    $("#rejectSummary").innerHTML = `<i data-icon="user"></i>${esc(a.applicant)} · ${a.typeName} · ${esc(a.target)} · <span class="mono">${a.id}</span>`;
+    $("#rejectText").value = "";
+    $("#modalReject .field").classList.remove("field--error");
+    App.openModal("modalReject");
+    App.renderIcons($("#rejectSummary"));
+    setTimeout(() => $("#rejectText").focus(), 60);
+  }
+  $("#rejectText").addEventListener("input", () => $("#modalReject .field").classList.remove("field--error"));
+
+  $("#btnRejectOk").addEventListener("click", async () => {
+    if (!rejecting) { App.closeModal("modalReject"); return; }
+    if (!App.validate($("#modalReject"))) { App.toast("驳回意见为必填项", "error"); return; }
+    const comment = $("#rejectText").value.trim();
+    if (comment.length < 10 || comment.length > 100) {
+      $("#modalReject .field").classList.add("field--error");
+      App.toast("驳回意见需 10-100 字，请补充", "error"); return;
+    }
+    const btn = $("#btnRejectOk"), html = btn.innerHTML;
+    btn.disabled = true; btn.classList.add("btn--disabled"); btn.textContent = "提交中…";
+    const res = await API.reject(rejecting.id, comment);
+    btn.disabled = false; btn.classList.remove("btn--disabled"); btn.innerHTML = html; App.renderIcons(btn);
+    if (res.code === 0) {
+      App.closeModal("modalReject");
+      App.toast("已驳回 · 已通知申请人", "info");
+      rejectingCard.querySelector(".js-status").innerHTML = App.statusBadge("rejected");
+      lockCard(rejectingCard);
+      pendingLeft--; renderCount(); maybeEmpty();
+      rejecting = null; rejectingCard = null;
+    }
+  });
+
+  /* ---------- 初始化 ---------- */
+  render();
+})();
+</script>
+</body>
+</html>
